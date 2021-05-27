@@ -12,7 +12,7 @@
 
 ## 必要環境
 
-Windows10(64bit)版のバイナリ while-v1.0-release-Win10-64bit.exe は、右側の「Rereases」 v1.0 のリリース（または下記リンク）から入手できます：
+Windows10(64bit)版のバイナリ while-v1.0-release-Win10-64bit.exe は、右側の「Releases」 v1.0 のリリース（または下記リンク）から入手できます：
 https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0-release/while-v1.0-release-Win10-64bit.exe
 
 プログラムのソースは source フォルダに入っています。

@@ -22,7 +22,7 @@
 Windows 10(64bit)版のバイナリは、Windows10フォルダ内の exeファイルを使ってください。
 
 プログラムのソースは source フォルダに入っています。
-実行には、Python とライブラリ PLY(Python Lex-Yacc) が必要です。
+実行には、Python とライブラリ PySide2、PLY(Python Lex-Yacc) が必要です。
 動作確認は以下の環境で行っています。
 
 - Windows 10(64bit), Python 3.7.7 （Python3 はもっと低いバージョンでも動くと思います）

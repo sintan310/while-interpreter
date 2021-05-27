@@ -36,7 +36,7 @@ https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0-release
 
 # 使い方
 
-アプリが起動すると、画面には2つのテキストアリアがあります：
+アプリの画面には2つのテキストアリアがあります：
 - 背景が白い方にプログラムを入力します。
 - 灰色のものは、実行結果が表示されます。
 

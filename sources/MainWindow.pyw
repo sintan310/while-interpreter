@@ -44,10 +44,10 @@ class MyThread(QThread):
     def __del__(self):
         # Threadオブジェクトが削除されたときにThreadを停止する
         print("deleted")
+        
         #self.result_value.emit(False)
-
-        self.stop()
-        self.wait()
+        #self.stop()
+        #self.wait()
         
 
     def setup(self, sentences):

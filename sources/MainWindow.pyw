@@ -94,19 +94,6 @@ class CentralWidget(QWidget):
         self.setAcceptDrops(True)
         self.setupThread()   
 
-    #def dragEnterEvent(self, e):
-    #    if e.mimeData().hasUrls():
-    #        e.acceptProposedAction()
-    #
-    #def dropEvent(self, e):
-    #    for url in e.mimeData().urls():
-    #        file_name = url.toLocalFile()
-    #        #print("Dropped file: " + file_name)
-    #        if self.settings['fname_master_keyword'] in file_name:
-    #            self.lineEdit_jiwari_list.setText(file_name)
-    #        else:
-    #            self.lineEdit_memberlist.setText(file_name)
-
                 
     def keyPressEvent(self, event):
         # print('keyPressEvent, key = %s.' % event.key())
@@ -157,7 +144,6 @@ class CentralWidget(QWidget):
         # 実行結果の表示用
         #self.messages = QTextBrowser()
         self.messages = QTextEdit()
-        #self.messages.setText(gl_selection_initial_messages)
         self.messages.setReadOnly(True)
         self.messages.setUndoRedoEnabled(False)
         self.messages.setStyleSheet("background-color: #e0e0e0")
@@ -210,10 +196,7 @@ class CentralWidget(QWidget):
         self.thread.wait()
         self.thread.stop()
         self.add_messages("強制終了されました");
-        
-        #del(self.thread)        
-        #self.thread = MyThread(parent=self, callback=lambda x:add_messages(x))
-        
+                
 
     def add_messages(self, mes):
         cursor = self.messages.textCursor()
@@ -245,9 +228,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('whileプログラムのインタプリタ')
 
         # Status Bar
-        self.statusBar = QStatusBar(self)
-        self.setStatusBar(self.statusBar)
-        self.statusBar.showMessage('')
+        #self.statusBar = QStatusBar(self)
+        #self.setStatusBar(self.statusBar)
+        #self.statusBar.showMessage('')
 
         # Menu Bar
         self.exit_menu = self.menuBar().addMenu('ファイル')

@@ -141,7 +141,7 @@ begin
 
   # ちなみに、procedure は式として扱われるようにしてあるので
   # oneUp(200) として実行すると 201 が返ってくる
-  oneUp(200)
+  print(oneUp(200))
 end
 ```
 

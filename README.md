@@ -17,7 +17,7 @@ https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0-release
 
 プログラムのソースは source フォルダに入っています。
 ソースの実行には Python とライブラリ PySide2、 PLY(Python Lex-Yacc) が必要です。
-動作確認は以下の環境で行っています。
+動作確認は以下の環境で行っています：
 
 - Windows 10(64bit), Python 3.7.7 （Python3 はもっと低いバージョンでも動くと思います）
 

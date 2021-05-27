@@ -1,5 +1,7 @@
 # whileプログラムのインタプリタ
 
+![screen-shot](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screen_shot1.png)
+
 書籍「チューリングの考えるキカイ ～人工知能の父に学ぶコンピュータ・サイエンスの基礎」
 （阿部彩芽・笠井琢美 著、技術評論社）で導入されている whileプログラムのインタプリタです。
 なお、このプログラムは書籍のファンである作者が勝手に作成したものであり、

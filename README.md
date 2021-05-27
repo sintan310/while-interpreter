@@ -41,6 +41,7 @@ Windows 10(64bit)版のバイナリは、Windows10フォルダ内の exeファ�
 まず、背景が白い方に whileプログラム ```print(23)``` を入力し、
 画面右側にある「実行」ボタンを押してみましょう。
 実行結果のところに ```23``` と表示されます。
+![screen-shot2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screen_shot2.png)
 
 なお、正しく入力されていないときにはエラーが表示されますので、
 訂正してもう一度「実行」ボタンを押してください。

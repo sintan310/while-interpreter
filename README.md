@@ -11,9 +11,13 @@
 
 
 ## 必要環境
+Windows10(64bit)版のバイナリは、右側のリリース v1.0-release （または下記リンク）から入手できます：
+
+https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0-release/while-v1.0-release.exe
+
 
 プログラムのソースは source フォルダに入っています。
-実行には、Python とライブラリ PySide2、 PLY(Python Lex-Yacc) が必要です。
+実行には Python とライブラリ PySide2、 PLY(Python Lex-Yacc) が必要です。
 動作確認は以下の環境で行っています。
 
 - Windows 10(64bit), Python 3.7.7 （Python3 はもっと低いバージョンでも動くと思います）

@@ -1,8 +1,8 @@
 ----------------------------------------------------------------
 
-  While言語のインタプリタ
+  While言語のインタプリタ（GUI版）
 
-      佐藤伸也 作（2021年2月6日版）
+      佐藤伸也 作（2021年5月27日版）
       shinya.sato.mito@vc.ibaraki.ac.jp
 
 ----------------------------------------------------------------
@@ -40,54 +40,48 @@ Windows 10(64bit)版のバイナリは、Windows10フォルダ内の exeファ�
 
 
 ----------------------------------------------
-2. 使い方
+2. 使ってみましょう
 
-インタプリタが起動すると、プログラムが入力できるウィンドウ（コマンドプロンプト）が表示されます。
-画面左に表示される 「[0] $」は「プロンプト（prompt）」と呼ばれ、
-プログラムが入力できることを意味しています
-（カギかっこ内の数字は、何行目の入力なのかを示しています）。
+アプリが起動すると、画面には2つのテキストアリアがあります：
+- 背景が白い方にプログラムを入力します。
+- 灰色のものは、実行結果が表示されます。
 
-プログラムの実行は Enterキーを押してください。
-例えば、「[0] $」と表示されている左側に 「x0 := 23」と入力して
-（半角スペースは無くても結構です）Enterキーを押すと、
-変数 x0 に 23 が代入されます（例1）。
+まず、背景が白い方に whileプログラム「print(23)」を入力し、
+画面右側にある「実行」ボタンを押してみましょう。
+実行結果のところに「23」と表示されます。
 
---- 例1 -----------
-[1] $ x0 := 23
-[2] $
+なお、正しく入力されていないときにはエラーが表示されますので、
+訂正してもう一度「実行」ボタンを押してください。
+
+複数の文を実行するときには複合文 begin ～ end を使います。
+例えば、変数 x0 に 23+10 の結果を代入し、x0 の値を表示するには
+例1のようにプログラムを入力して実行します（「33」と表示されるはずです）。
+
+--- 例1 ----------
+begin
+  x0:=23+10;
+  print(x0);
+end
 ------------------
 
 
-変数 x0 の値を表示させるときには print文を使って「print(x0)」と
-入力して実行してください（例2）。
+行頭の半角スペースは無くても結構ですが、
+begin ～ end で囲まれていることが分かりやすいように
+インデントとして半角スペースを 2文字入れておくと良いです。
 
---- 例2 -----------
-[2] $ print(x0)
-      23
+print文で複数の変数の値を表示したいときには、
+カンマ「,」で区切って変数名を指定してください（例2）：
 
-[3] $
+--- 例2 ----------
+begin
+  x0:=23;
+  x1:=x0+10;
+  print(x0,x1);
+end
 ------------------
 
-print に複数の変数名をカンマ「,」で区切って指定すると、
-複数の変数の値が表示できます（例3）：
+なお、実行は、キーボードショートカット Ctrl+Enter でも行えます。
 
---- 例3 -----------
-[3] $ x1:=100
-[4] $ print(x0,x1)
-      23 100
-
-[5] $
-------------------
-
-
-一つの変数の値だけを表示させたいときには、その変数を入力して実行してください（例4）：
-
---- 例4 -----------
-[6] $ x0
-      23
-
-[7] $
-------------------
 
 
 
@@ -126,12 +120,19 @@ print に複数の変数名をカンマ「,」で区切って指定すると、
   「begin s1;s2; ... ;sm; end」
 として書けます
 （つまり、最後の文 sm にセミコロンを付けてもエラーになりません）。
-  
+
+- whileプログラムの文は 1行で書いてください。
+　なお、begin ～ end の間は、改行しても1行の文として解釈されます。
+
 
 ----------------------------------------------
 4. プログラムのサンプル
 
-## 引数の値を一つ増やす
+-----------------------------
+4.1 引数の値を一つ増やす
+-----------------------------
+
+# プログラム開始
 procedure z:= oneUp(a): begin
   b:=a;
   b++;
@@ -139,52 +140,79 @@ procedure z:= oneUp(a): begin
 end
 
 # 実行例
-x:=100
-z:=oneUp(x)
-print(z) # 101 が表示される
-print(x) # 100 が表示される
+begin
+  x:=100;
+  z:=oneUp(x);
+  print(z);   # 101 が表示されるはず
+  print(x);   # 100 が表示されるはず
 
-# ちなみに、procedure は式として扱われるようにしてあるので
-# oneUp(200) として実行すると 201 が返ってくる
-oneUp(200)
+  # ちなみに、procedure は式として扱われるようにしてあるので
+  # oneUp(200) として実行すると 201 が返ってくる
+  oneUp(200)
+end
 
 
-## 素数判定
+-----------------------------
+4.2 素数判定
+-----------------------------
+
+# プログラム開始
 procedure  z:= isPrime(n): begin
   z:=1;
   w:=2;
-  while (w < n) and (z = 1) do begin
+  while (w < n) and (z=1) do begin
     if (n mod w)=0 then z:=0;
     w++;
-  end;
+  end
 end
 
 # 実行例
-z:=isPrime(3)
-print(z) # 1 が表示される
-z:=isPrime(4)
-print(z) # 0 が表示される
+begin
+  z:=isPrime(3);
+  print(z);       # 1 が表示されるはず
+  z:=isPrime(4);
+  print(z)        # 0 が表示されるはず
+end
 
 
 
-## n番目の素数を求める
+-----------------------------
+4.3 n番目の素数を求める
+-----------------------------
+
+# プログラム開始
+procedure  z:= isPrime(n): begin
+  z:=1;
+  w:=2;
+  while (w < n) and (z=1) do begin
+    if (n mod w)=0 then z:=0;
+    w++;
+  end
+end
+
 procedure  z:= getPrime(n): begin
   hit:=0;
-  z  :=2;
+  z:=2;
   while (hit < n) do begin
     z++;
-    hantei := isPrime(z);
-    if hantei then hit++;
+    kekka:=isPrime(z);
+    if kekka=1 then hit++;
   end;
   #print(z);
 end
 
 # 実行例
-z:=getPrime(5)
-print(z) # 13 が表示される
+begin
+  z:=getPrime(5);
+  print(z);       # 13 が表示されるはず
+end
 
 
-## チューリングマシン（単能）
+
+-----------------------------
+4.4 チューリングマシン（単能）
+-----------------------------
+
 命令表
 |条件 |     |      | 動作 |     |
 |---  | --- | ---  | ---  | --- |
@@ -201,21 +229,27 @@ print(z) # 13 が表示される
 
 
 # プログラム開始
-x0 :=["▷", "1", "1", "1"]
-h := 1
-q := 0
-
 begin
-  active := 1;
-  while (active = 1) do begin
-    print(x0,h,q);
+  # 初期状態の設定
+  x0:=["▷", "1", "1", "1"];
+  h:=1;
+  q:=0;
+
+  # 実行開始
+  active:=1;
+  while (active=1) do begin
+    print(x0, h, q);
     kigou := x0[h];
-    if (q = 0) and (kigou = "1") then begin
-      q :=1;  x0[h] := "␣" end
-    else if (q = 1) and (kigou = "␣") then begin
-      q := 2;  h++  end
-    else if (q = 2) and (kigou = "1") then begin
-      q := 1;  x0[h] := "␣" end
+
+    if (q=0) and (kigou="1") then begin
+      q:=1;  x0[h] := "␣" 
+    end
+    else if (q=1) and (kigou="␣") then begin
+      q:=2;  h++ 
+    end
+    else if (q=2) and (kigou="1") then begin
+      q:=1;  x0[h]:="␣" 
+    end
     else  active := 0
   end
 end
@@ -229,30 +263,36 @@ end
 # ["▷", "␣", "␣", "1"] 3 2
 # ["▷", "␣", "␣", "␣"] 3 1
 # ["▷", "␣", "␣", "␣"] 4 2
-```
 
 
-## 階乗
 
-# 再帰関数の例です
+-----------------------------
+4.5 階乗（再帰関数の例です）
+-----------------------------
+
+# プログラム開始
 procedure z:=fact(n): begin
   if n=0 then begin
     z:=1
   end
   else begin
-       z1 := fact(n-1);
-       z := n * z1;
+       z1:=fact(n-1);
+       z := n*z1;
   end
 end
 
 # 実行例
-z:=fact(3)
-print(z)   # 6のはず
+begin
+  z:=fact(3);
+  print(z)      # 6のはず
+end
 
 
-## 階乗（スタックによる再帰除去版）
+-----------------------------
+4.6 スタック
+-----------------------------
 
-### スタック構造
+# プログラム開始
 procedure z:=mkStack(): begin
   z:=[0,[0]]
 end
@@ -284,36 +324,73 @@ end
 
 
 # 実行例
-stack := mkStack()
-print(stack)  # [0, [0]]
+begin
+  stack := mkStack();
+  print(stack);  # [0, [0]]
 
-stack := push(stack, 100)
-print(stack)  # [1, [0, 100]]
+  stack := push(stack, 100);
+  print(stack);  # [1, [0, 100]]
 
-stack := push(stack, 38)
-print(stack)  # [2, [0, 100, 38]]
+  stack := push(stack, 38);
+  print(stack);  # [2, [0, 100, 38]]
 
-z:=top(stack)
-print(z)  # 38
+  z:=top(stack);
+  print(z);  # 38
 
-stack := pop(stack)
-print(stack)  #  [1, [0, 100, 38]]  
+  stack := pop(stack);
+  print(stack);  #  [1, [0, 100, 38]]  
      # 38 が残るが、参照先を示す stack[1] が 2 から 1 になっているので
      # スタック構造としては正しく機能できる
 
-z:=top(stack)
-print(z)  # 100  （このように、現在のトップに積まれている値が取得できる）
+  z:=top(stack);
+  print(z);  # 100  （このように、現在のトップに積まれている値が取得できる）
 
-z:=isEmpty(stack)
-print(z)  # 0
+  z:=isEmpty(stack);
+  print(z);  # 0
 
-stack := pop(stack)
-z:=isEmpty(stack)
-print(z)  # 1
-print(stack)  # [0, [0, 100, 38]] （ごみは残るが index が 0 であるため empty）
+  stack := pop(stack);
+  z:=isEmpty(stack);
+  print(z);      # 1
+  print(stack);  # [0, [0, 100, 38]] （ごみは残るが index が 0 であるため empty）
+end
 
 
-### 階乗（再帰なし）
+-----------------------------
+4.7 階乗（スタックを用いた再帰なし版）
+-----------------------------
+
+# プログラム開始
+procedure z:=mkStack(): begin
+  z:=[0,[0]]
+end
+
+procedure z:=isEmpty(s): begin
+  if s[0]=0 then z:=1
+  else z:=0
+end
+
+procedure z:=push(s,n): begin
+  index := s[0];
+  index++;
+  vals := s[1];
+  vals[index] := n;
+  z := [index, vals];
+end
+
+procedure z:=pop(s): begin
+  index := s[0];
+  index--;
+  z := [index, s[1]]
+end
+
+procedure z:=top(s): begin
+  index := s[0]; 
+  vals := s[1];
+  z := vals[index] 
+end
+
+
+# 再帰なしの階乗
 procedure z:=Fact(n): begin
   task := mkStack();
   retval := mkStack();
@@ -345,11 +422,16 @@ end
 
 
 # 実行例
-z:=Fact(4)
-print(z)  # 24 となるはず
+begin
+  z:=Fact(4);
+  print(z)     # 24 になるはず
+end
 
 
-## whileプログラムのインタプリタ eval（再帰的定義版）
+-----------------------------
+4.8 whileプログラムのインタプリタ eval
+（再帰的定義版）
+-----------------------------
 
 #なお、与えるプログラムはあらかじめ構文木に変換しておく
 # xi++ => ["incx", i]
@@ -387,28 +469,28 @@ end
 
 
 # 実行例
-# P  : x0++
-# x0 : 10
-# とする。
+begin
 
-Env := [10]
-print(Env)
-Env := eval(["incx", 0], Env)
-print(Env)  # [11] となるはず
+  # 初期条件
+  # P  : x0++
+  # x0 : 10
+
+  Env := [10];
+  print(Env);
+  Env := eval(["incx", 0], Env);
+  print(Env);  # [11] になるはず
 
 
+  # 初期条件
+  # P  : while x1 != 0 do begin x1--; x0++; x0++ end
+  # x0 : 0
+  # x1 : 10
 
-# 実行例
-# P  : while x1 != 0 do begin x1--; x0++; x0++ end
-# x0 : 0
-# x1 : 10
-# とする。
-
-Env := [0,10]
-print(Env)
-Env := eval(["while", 1, ["multi", 3, [["decx", 1], ["incx", 0], ["incx", 0]]]], Env)
-print(Env)  # [20,0] となるはず
-
+  Env := [0,10];
+  print(Env);
+  Env := eval(["while", 1, ["multi", 3, [["decx", 1], ["incx", 0], ["incx", 0]]]], Env);
+  print(Env);  # [20,0] になるはず
+end
 
 
 
@@ -420,6 +502,15 @@ print(Env)  # [20,0] となるはず
 
 ----------------------------------------------
 5. 変更履歴
+2021-05-27
+GUI 版を作成した。
+また、GUI版では一つの文しか受け付けないようにし、
+複数の文を入力するときには
+複合文 begin～end を使うようにした
+（文法的にはこちらの方が正しい）。
+
+
+
 2021-02-06
 結果出力のインデントが、9行目にも関わらず
 10行目のものとなっていたので修正した。

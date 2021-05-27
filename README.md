@@ -12,8 +12,6 @@
 
 ## 必要環境
 
-Windows 10(64bit)版のバイナリは、Windows10フォルダ内の exeファイルを使ってください。
-
 プログラムのソースは source フォルダに入っています。
 実行には、Python とライブラリ PySide2、 PLY(Python Lex-Yacc) が必要です。
 動作確認は以下の環境で行っています。

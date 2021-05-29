@@ -36,10 +36,10 @@ class MyThread(QThread):
     
     def __init__(self, parent=None, callback=None):
         super(MyThread, self).__init__(parent)
-        self.callback = callback
         self.stopped = False
         self.mutex = QMutex()
-
+        self.evaluator = evaluator.Evaluator(GUI=True,
+                                             callback=self.emit_message)
         
     def __del__(self):
         # Threadオブジェクトが削除されたときにThreadを停止する
@@ -78,7 +78,7 @@ class MyThread(QThread):
     def run(self):
         if self.stopped:
             self.restart()
-            evaluator.evaluator(self.sentences, self.emit_message)
+            self.evaluator.evaluator(self.sentences)
             self.stop()
             
         

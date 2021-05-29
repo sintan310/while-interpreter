@@ -7,7 +7,7 @@
 #
 # Copyright (c) 2021 Shinya Sato
 # Released under the MIT license
-# https://opensource.org/licenses/mit-license.php#
+# https://opensource.org/licenses/mit-license.php
 #
 # This source is an extension of the following source code:
 #
@@ -37,18 +37,21 @@ class Node:
             self.children = []
         self.leaf = leaf
 
-        
+
 
 GUI_mode = False
 Callback = None
+
 def myprint(mes):
-    global GUI_mode
+    global GUI_mode, Callback
+    
     if GUI_mode:
-        global Callback
         Callback(mes)
     else:
         print(mes)
             
+
+
 
 # reserved（予約語）
 reserved = {
@@ -436,472 +439,490 @@ def p_error(t):
     #'statement : PRINT error SEMI'
     #print("文法エラー. ")
     #print(t)
-    global Error_alised
+    
+    global Error_alised, My_lineno
     Error_alised = True
     if not(t is None):
         myprint("%d行目: 文法エラー '%s'\n" % (t.lineno, t.value))
 
     else:
-        global My_lineno
-        myprint(mes = "%d行目: 文が途中で終了しています\n" % (My_lineno-1))
+        myprint("%d行目: 文が途中で終了しています\n" % (My_lineno-1))
 
 
-
-
-# dictionary of global names and procedures
-Procedures = {}
-
-def pretty_print_value(aVal):
-    result = ""
-    if type(aVal) is int:
-        result = "{}".format(aVal)
-        return result
-    
-    elif type(aVal) is str:
-        result = "{}".format(aVal)
-        return result
-    
-    elif type(aVal) is dict:
-        array_val_list = []
-        aVal_key = aVal.keys()
-        for i in range(0, max(aVal_key) + 1):
-            if i in aVal_key:
-                retstr = pretty_print_value(aVal[i])
-            else:
-                retstr = "0"
-                    
-            array_val_list += [retstr]
-        
-        result = "[{}]".format(", ".join(array_val_list))
-        return result
-        
-        
-        
-def eval_sentence(aNode, env):
-    global Procedures
-    
-    if aNode.type == 'binop':
-        if aNode.leaf == ":=":
-            target_value = eval_exp(aNode.children[1], env)
-            var_name = aNode.children[0].leaf
-            if type(target_value) is dict:
-                # dict（array） の場合、別のオブジェクトとして代入
-                # （もとのオブジェクトに影響が及んでしまう）
-                env[var_name] = copy.deepcopy(target_value)
-            else:
-                env[var_name] = target_value                    
-            return
-
-    elif aNode.type == 'array_subst':
-        target_value = eval_exp(aNode.children[2], env)
-        target_index = eval_exp(aNode.children[1], env)
-        var_name = aNode.children[0].leaf
-
-        try:
-            env[var_name][target_index] = target_value
-        except (TypeError, KeyError):
-            env[var_name] = {}
-            env[var_name][target_index] = target_value
-
-        return
-
-    elif aNode.type == 'unarrayop':
-        if aNode.leaf == '++':
-            var_name = aNode.children[0].leaf
-            env[var_name] += 1
-            return
-
-        elif aNode.leaf == '--':
-            var_name = aNode.children[0].leaf
-            if env[var_name] > 0:
-                env[var_name] -= 1                 
-            else:
-                env[var_name] = 0
-            return
-
-    elif aNode.type == 'print':
-        result_vals = []
-        for anexp in aNode.children:
-            aval = eval_exp(anexp, env)
-            #result_vals += [str(aval)]
-            result_vals += [pretty_print_value(aval)]
-
-        global GUI_mode
-        if GUI_mode == False:
-            global My_lineno
-            lineno_indent = " " * (len(str(My_lineno-1)) + 5)
-            print(lineno_indent + " ".join(result_vals) + "\n")
-        else:
-            myprint(" ".join(result_vals))
-            
-        return
-
-    
-    elif aNode.type == 'evalexp':
-        # print ではなく、単なる一つの式を評価するだけ
-        anexp = aNode.children[0]
-        aval = eval_exp(anexp, env)
-        return
-
-    
-    elif aNode.type == 'while':
-        while True:
-            target_value = eval_exp(aNode.children[0], env)
-
-            if target_value == 1:
-                
-                eval_sentence(aNode.children[1], env)
-
-                
-            else:
-                break
-
-        return
-
-    elif aNode.type == 'if':
-        target_value = eval_exp(aNode.children[0], env)
-        if target_value == 1:            
-            eval_sentence(aNode.children[1], env)
-        else:
-            if aNode.leaf == "with-else":
-                eval_sentence(aNode.children[2], env)
-        return
-
-    elif aNode.type == 'multi':
-        statements = aNode.children
-        for statement_node in statements:
-            eval_sentence(statement_node, env)
-        return
-
-    elif aNode.type == 'procedure':
-        Procedures[aNode.leaf] = aNode.children
-        return
-
-    
-                
-def eval_exp(aNode, env):
-
-    if aNode.type == 'binop':
-        val0 = eval_exp(aNode.children[0], env)
-        val1 = eval_exp(aNode.children[1], env)
-        if aNode.leaf == "+":
-            if type(val0) is int and type(val1) is int:
-                return val0+val1
-            else:
-                if type(val0) is str:
-                    val0 = val0[1:-1]
-                else:
-                    val0 = str(val0)
-                    
-                if type(val1) is str:
-                    val1 = val1[1:-1]
-                else:
-                    val1 = str(val1)
-            
-                return '"' + str(val0) + str(val1) + '"'
-            
-            
-        elif aNode.leaf == "-":
-            result = val0-val1
-            if result < 0: result=0
-            return result
-        elif aNode.leaf == "*":
-            return val0*val1
-        elif aNode.leaf == "div":
-            return int(val0/val1)
-        elif aNode.leaf == "mod":
-            return val0%val1
-        elif aNode.leaf == "!=":
-            if val0 != val1: return 1
-            else: return 0
-        elif aNode.leaf == "=":
-            if val0 == val1: return 1
-            else: return 0
-        elif aNode.leaf == ">=":
-            if val0 >= val1: return 1
-            else: return 0
-        elif aNode.leaf == ">":
-            if val0 > val1: return 1
-            else: return 0
-        elif aNode.leaf == "<=":
-            if val0 <= val1: return 1
-            else: return 0
-        elif aNode.leaf == "<":
-            if val0 < val1: return 1
-            else: return 0
-        elif aNode.leaf == "and":
-            if (val0 ==1) and (val1 == 1): return 1
-            else: return 0
-        elif aNode.leaf == "or":
-            if (val0 ==1) or (val1 == 1): return 1
-            else: return 0
-
-    elif aNode.type == 'singleop':
-        val0 = eval_exp(aNode.children[0], env)
-        if aNode.leaf == "not":
-            if val0 ==0: return 1
-            else: return 0
-            
-    elif aNode.type == 'number':
-        return aNode.leaf
-
-    elif aNode.type == 'string':
-        return aNode.leaf
-    
-    elif aNode.type == 'name':
-        if aNode.leaf in env:
-            target_value = env[aNode.leaf]
-        else:
-            target_value = 0
-            
-        return(target_value)
-    
-    elif aNode.type == 'array':
-        an_array = {}
-        for i, anexp in enumerate(aNode.children):
-            here_result = eval_exp(anexp, env)
-            an_array[i] = here_result
-        
-        return an_array
-    
-    elif aNode.type == 'array_element':
-        here_index = eval_exp(aNode.children[1], env)
-        name_str = aNode.children[0].leaf
-        if name_str in env:
-            try:
-                target_value = env[name_str][here_index]
-            except KeyError:
-                env[name_str][here_index] = 0
-                target_value = 0
-            except TypeError:
-                env[name_str] = {}
-                env[name_str][here_index] = 0
-                target_value = {}
-        else:
-            target_value = 0
-
-        return(target_value)
-    
-    
-    elif aNode.type == 'array_element_via_array':
-        target_value1 = eval_exp(aNode.children[0], env)
-        target_value2 = eval_exp(aNode.children[1], env)
-        if target_value2 not in target_value1:
-            target_value1[target_value2] = 0
-        return(target_value1[target_value2])
-
-
-    elif aNode.type == 'call':
-        procedure_name = aNode.leaf
-
-        try:
-            # procedure の情報を取得
-            procedure_body = Procedures[procedure_name][2]
-            procedure_retname = Procedures[procedure_name][0]
-            procedure_params = Procedures[procedure_name][1]
-        except:
-            myprint("Error: Procedure '{}' が定義されていません。".format(procedure_name))
-
-            return 0
-
-            
-        # 呼び出し側の情報を取得
-        call_params = aNode.children
-
-
-        procedure_env = {} 
-
-        # 環境の procedure_params に call_params を代入する
-        for procedure_aparam, call_aparam in zip(procedure_params, call_params):
-            target_value = eval_exp(call_aparam, env)
-            procedure_env[procedure_aparam] = target_value
-
-        # 本体の実行
-        eval_sentence(procedure_body, procedure_env)
-
-        for procedure_aparam, call_aparam in zip(procedure_params,
-                                                 call_params):
-            if call_aparam.type == "name":
-                # 変数名で呼び出している時には
-                # procedure 内で更新されるものとする
-                env[call_aparam.leaf] = procedure_env[procedure_aparam]
-
-
-        try:
-            retval = procedure_env[procedure_retname]
-        except KeyError:
-            # procedure 内で retval が使われていないときは 0 を返すとする
-            retval = 0
-                        
-        return retval
-
-
-
-    
-def say_hello():
-
-    message = '''
-whileプログラムのインタプリタ (26 May 2021)
-
-'''
-
-    print(message)
-
-        
 import ply.yacc as yacc
 parser = yacc.yacc(write_tables=False, debug=False)
 
-
-def valid_occurs(aline, keyword):
-    if keyword not in aline:
-        return False
-    
-    key_pos = aline.find(keyword)
-    if '#' not in aline:
-        return True
-    else:
-        comment_pos = aline.find('#')
-        if comment_pos < key_pos:
-            return False
-
-    return True
-
-
-def count_keyword(aline, keyword):
-    if '#' not in aline:
-        return aline.count(keyword)
-
-    if keyword not in aline:
-        return 0
-    
-    comment_pos = aline.find('#')
-    valid_str = aline[:(comment_pos -1)]
-    return valid_str.count(keyword)
-
-
-
+# ----------------------------------------------------------------
 My_lineno = 1
 
 
+class Evaluator:
+    def __init__(self, GUI, callback=None):
+
+        # dictionary of global names and procedures
+        self.procedures = {}
+
+        # stacks for tasks
+        self.task_stack = []
+
+        # callback for print
+        global Callback, GUI_mode
+        Callback = callback
+        GUI_mode = GUI
+        
+
+    def pretty_print_value(self, value):
+        result = ""
+        if type(value) is int:
+            result = "{}".format(value)
+            return result
+
+        elif type(value) is str:
+            result = "{}".format(value)
+            return result
+
+        elif type(value) is dict:
+            array_value_list = []
+            value_key = value.keys()
+            for i in range(0, max(value_key) + 1):
+                if i in value_key:
+                    retstr = pretty_print_valueue(value[i])
+                else:
+                    retstr = "0"
+
+                array_value_list += [retstr]
+
+            result = "[{}]".format(", ".join(array_value_list))
+            return result
+        
+        
+        
+    def eval_sentence(self, aNode, env):
+        global GUI_mode, My_lineno
+        
+        if aNode.type == 'binop':
+            if aNode.leaf == ":=":
+                target_value = self.eval_exp(aNode.children[1], env)
+                var_name = aNode.children[0].leaf
+                if type(target_value) is dict:
+                    # dict（array） の場合、別のオブジェクトとして代入
+                    # （もとのオブジェクトに影響が及んでしまう）
+                    env[var_name] = copy.deepcopy(target_value)
+                else:
+                    env[var_name] = target_value                    
+                return
+
+        elif aNode.type == 'array_subst':
+            target_value = self.eval_exp(aNode.children[2], env)
+            target_index = self.eval_exp(aNode.children[1], env)
+            var_name = aNode.children[0].leaf
+
+            try:
+                env[var_name][target_index] = target_value
+            except (TypeError, KeyError):
+                env[var_name] = {}
+                env[var_name][target_index] = target_value
+
+            return
+
+        elif aNode.type == 'unarrayop':
+            if aNode.leaf == '++':
+                var_name = aNode.children[0].leaf
+                try:
+                    env[var_name] += 1
+                except KeyError as e:
+                    env[var_name] = 1
+                return
+
+            elif aNode.leaf == '--':
+                var_name = aNode.children[0].leaf
+                if env[var_name] > 0:
+                    try:
+                        env[var_name] -= 1
+                    except KeyError as e:
+                        env[var_name] = 0
+                        
+                else:
+                    env[var_name] = 0
+                return
+
+        elif aNode.type == 'print':
+            result_vals = []
+            for anexp in aNode.children:
+                aval = self.eval_exp(anexp, env)
+                result_vals += [self.pretty_print_value(aval)]
+
+            if GUI_mode == False:
+                lineno_indent = " " * (len(str(My_lineno-1)) + 5)
+                print(lineno_indent + " ".join(result_vals) + "\n")
+            else:
+                myprint(" ".join(result_vals))
+
+            return
+
+
+        elif aNode.type == 'evalexp':
+            # print ではなく、単なる一つの式を評価するだけ
+            anexp = aNode.children[0]
+            aval = self.eval_exp(anexp, env)
+            return
+
+
+        elif aNode.type == 'while':
+            while True:
+                target_value = self.eval_exp(aNode.children[0], env)
+
+                if target_value == 1:
+
+                    self.eval_sentence(aNode.children[1], env)
+
+
+                else:
+                    break
+
+            return
+
+        elif aNode.type == 'if':
+            target_value = self.eval_exp(aNode.children[0], env)
+            if target_value == 1:            
+                self.eval_sentence(aNode.children[1], env)
+            else:
+                if aNode.leaf == "with-else":
+                    self.eval_sentence(aNode.children[2], env)
+            return
+
+        elif aNode.type == 'multi':
+            statements = aNode.children
+            for statement_node in statements:
+                self.eval_sentence(statement_node, env)
+            return
+
+        elif aNode.type == 'procedure':
+            self.procedures[aNode.leaf] = aNode.children
+            return
+
+    
+                
+    def eval_exp(self, aNode, env):
+
+        if aNode.type == 'binop':
+            val0 = self.eval_exp(aNode.children[0], env)
+            val1 = self.eval_exp(aNode.children[1], env)
+            if aNode.leaf == "+":
+                if type(val0) is int and type(val1) is int:
+                    return val0+val1
+                else:
+                    if type(val0) is str:
+                        val0 = val0[1:-1]
+                    else:
+                        val0 = str(val0)
+
+                    if type(val1) is str:
+                        val1 = val1[1:-1]
+                    else:
+                        val1 = str(val1)
+
+                    return '"' + str(val0) + str(val1) + '"'
+
+
+            elif aNode.leaf == "-":
+                result = val0-val1
+                if result < 0: result=0
+                return result
+            elif aNode.leaf == "*":
+                return val0*val1
+            elif aNode.leaf == "div":
+                return int(val0/val1)
+            elif aNode.leaf == "mod":
+                return val0%val1
+            elif aNode.leaf == "!=":
+                if val0 != val1: return 1
+                else: return 0
+            elif aNode.leaf == "=":
+                if val0 == val1: return 1
+                else: return 0
+            elif aNode.leaf == ">=":
+                if val0 >= val1: return 1
+                else: return 0
+            elif aNode.leaf == ">":
+                if val0 > val1: return 1
+                else: return 0
+            elif aNode.leaf == "<=":
+                if val0 <= val1: return 1
+                else: return 0
+            elif aNode.leaf == "<":
+                if val0 < val1: return 1
+                else: return 0
+            elif aNode.leaf == "and":
+                if (val0 ==1) and (val1 == 1): return 1
+                else: return 0
+            elif aNode.leaf == "or":
+                if (val0 ==1) or (val1 == 1): return 1
+                else: return 0
+
+        elif aNode.type == 'singleop':
+            val0 = self.eval_exp(aNode.children[0], env)
+            if aNode.leaf == "not":
+                if val0 ==0: return 1
+                else: return 0
+
+        elif aNode.type == 'number':
+            return aNode.leaf
+
+        elif aNode.type == 'string':
+            return aNode.leaf
+
+        elif aNode.type == 'name':
+            if aNode.leaf in env:
+                target_value = env[aNode.leaf]
+            else:
+                target_value = 0
+                env[aNode.leaf] = 0
+
+            return(target_value)
+
+        elif aNode.type == 'array':
+            an_array = {}
+            for i, anexp in enumerate(aNode.children):
+                here_result = self.eval_exp(anexp, env)
+                an_array[i] = here_result
+
+            return an_array
+
+        elif aNode.type == 'array_element':
+            here_index = self.eval_exp(aNode.children[1], env)
+            name_str = aNode.children[0].leaf
+            if name_str in env:
+                try:
+                    target_value = env[name_str][here_index]
+                except KeyError:
+                    env[name_str][here_index] = 0
+                    target_value = 0
+                except TypeError:
+                    env[name_str] = {}
+                    env[name_str][here_index] = 0
+                    target_value = {}
+            else:
+                target_value = 0
+
+            return(target_value)
+
+
+        elif aNode.type == 'array_element_via_array':
+            target_value1 = self.eval_exp(aNode.children[0], env)
+            target_value2 = self.eval_exp(aNode.children[1], env)
+            if target_value2 not in target_value1:
+                target_value1[target_value2] = 0
+            return(target_value1[target_value2])
+
+
+        elif aNode.type == 'call':
+            procedure_name = aNode.leaf
+
+            try:
+                # procedure の情報を取得
+                procedure_body = self.procedures[procedure_name][2]
+                procedure_retname = self.procedures[procedure_name][0]
+                procedure_params = self.procedures[procedure_name][1]
+            except:
+                myprint("Error: Procedure '{}' が定義されていません。".format(procedure_name))
+
+                return 0
+
+
+            # 呼び出し側の情報を取得
+            call_params = aNode.children
+
+
+            procedure_env = {} 
+
+            # 環境の procedure_params に call_params を代入する
+            for procedure_aparam, call_aparam in zip(procedure_params, call_params):
+                target_value = self.eval_exp(call_aparam, env)
+                procedure_env[procedure_aparam] = target_value
+
+            # 本体の実行
+            eval_sentence(procedure_body, procedure_env)
+
+            for procedure_aparam, call_aparam in zip(procedure_params,
+                                                     call_params):
+                if call_aparam.type == "name":
+                    # 変数名で呼び出している時には
+                    # procedure 内で更新されるものとする
+                    env[call_aparam.leaf] = procedure_env[procedure_aparam]
+
+
+            try:
+                retval = procedure_env[procedure_retname]
+            except KeyError:
+                # procedure 内で retval が使われていないときは 0 を返すとする
+                retval = 0
+
+            return retval
+
+
+
+    
+    def say_hello(self):
+
+        message = '''
+    whileプログラムのインタプリタ (26 May 2021)
+
+    '''
+
+        print(message)
 
         
-def evaluator(s, callback):
-    """
-    evaluator for GUI mode
-    """
-    
-    global My_lineno
-    global Error_alised
-    global Callback, GUI_mode
 
-    if s == "":
-        return
+    def valid_occurs(self, aline, keyword):
+        if keyword not in aline:
+            return False
+
+        key_pos = aline.find(keyword)
+        if '#' not in aline:
+            return True
+        else:
+            comment_pos = aline.find('#')
+            if comment_pos < key_pos:
+                return False
+
+        return True
 
 
-    GUI_mode = True
-    Callback = callback
-    
-    env = {}
-    lexer.lineno = 1
-    My_lineno = 1
-    nest = 0
-    
-    
-    ss = s.split('\n')
-    
-    sentence_list = []
-    sentence = ""
+    def count_keyword(self, aline, keyword):
+        if '#' not in aline:
+            return aline.count(keyword)
 
-    is_in_multi = False
-    is_in_procedure = False
-    count_multi = 0
-    
-    for s in ss:
+        if keyword not in aline:
+            return 0
+
+        comment_pos = aline.find('#')
+        valid_str = aline[:(comment_pos -1)]
+        return valid_str.count(keyword)
+
+
         
-        if s=="":
-            continue
+    def evaluator(self, s):
+        """
+        evaluator for GUI mode
+        """
+
+        global Error_alised
+        global lexer, parser
+        global My_lineno
         
-        if not s:
-            continue
+        if s == "":
+            return
 
-        if s[0] == "#":
-            continue
+        env = {}
+        lexer.lineno = 1
+        My_lineno = 1
+        nest = 0
 
-        sentence += s + "\n"
 
-        if valid_occurs(s, 'procedure'):
-            if not valid_occurs(s, 'begin') and not valid_occurs(s, 'end'):
-                is_in_procedure = False
-                sentence_list += [sentence]
-                sentence=""
+        ss = s.split('\n')
+
+        sentence_list = []
+        sentence = ""
+
+        is_in_multi = False
+        is_in_procedure = False
+        count_multi = 0
+        
+        for s in ss:
+
+            if s=="":
                 continue
-            else:
-                is_in_procedure = True
-                
-            
-        if valid_occurs(s, 'begin') or valid_occurs(s, 'end') or nest>0:
 
-            is_in_multi = True
-            
-            nest += count_keyword(s, 'begin')
-            nest -= count_keyword(s, 'end')
-            #sentence += "\n"
-
-            if nest != 0:                
+            if not s:
                 continue
-        
 
-        # nest が 0 のときには sentence に加える
-        if count_multi == 0 and is_in_multi and sentence != "":
-            # multi は1つまでにする。procedure の multi はカウントしない。
-            sentence_list += [sentence]
-            
-            is_in_multi = False
-            
-            if is_in_procedure:
-                is_in_procedure = False
-            else:
-                count_multi += 1
-                #print("sentence=" + sentence)
-                #print("count_multi=%d" % count_multi)
-                
-            sentence = ""
+            if s[0] == "#":
+                continue
 
-            
-    # 加えられなかった sentence があるときには sentence_list に追加する
-    if sentence != "":
-        try:
-            if valid_occurs(sentence_list[-1], "procedure") and count_multi==0:
-                # 最後が procedure で終わってたら、sentence を追加
+            sentence += s + "\n"
+
+            if self.valid_occurs(s, 'procedure'):
+                if not self.valid_occurs(s, 'begin') \
+                   and not self.valid_occurs(s, 'end'):
+                    is_in_procedure = False
+                    sentence_list += [sentence]
+                    sentence=""
+                    continue
+                else:
+                    is_in_procedure = True
+
+
+            if self.valid_occurs(s, 'begin') or \
+               self.valid_occurs(s, 'end') or \
+               nest>0:
+
+                is_in_multi = True
+
+                nest += self.count_keyword(s, 'begin')
+                nest -= self.count_keyword(s, 'end')
+                #sentence += "\n"
+
+                if nest != 0:                
+                    continue
+
+
+            # nest が 0 のときには sentence に加える
+            if count_multi == 0 and is_in_multi and sentence != "":
+                # multi は1つまでにする。procedure の multi はカウントしない。
                 sentence_list += [sentence]
-            else:
-                # そうでないときには sentence を前の文の継続とする
-                sentence_list[-1] += sentence
-        except:
-            sentence_list += [sentence]
-            
 
-    #print(sentence_list)
-    
-    for sentence in sentence_list:
-        sentence += "\n"
-        My_lineno += count_keyword(sentence, "\n")
+                is_in_multi = False
 
-        Error_alised = False
-        aNode = parser.parse(sentence)
-        
-        if Error_alised == False and not(aNode is None):
-            if aNode.type == "evalexp":
-                aNode.type = "print"
-                
-            eval_sentence(aNode, env)
+                if is_in_procedure:
+                    is_in_procedure = False
+                else:
+                    count_multi += 1
+                    #print("sentence=" + sentence)
+                    #print("count_multi=%d" % count_multi)
+
+                sentence = ""
+
+
+        # 加えられなかった sentence があるときには sentence_list に追加する
+        if sentence != "":
+            try:
+                if self.valid_occurs(sentence_list[-1], "procedure") \
+                   and count_multi==0:
+                    # 最後が procedure で終わってたら、sentence を追加
+                    sentence_list += [sentence]
+                else:
+                    # そうでないときには sentence を前の文の継続とする
+                    sentence_list[-1] += sentence
+            except:
+                sentence_list += [sentence]
+
+
+        #print(sentence_list)
+
+        for sentence in sentence_list:
+            sentence += "\n"
+            My_lineno += self.count_keyword(sentence, "\n")
+
+            Error_alised = False
+            aNode = parser.parse(sentence)
+
+            if Error_alised == False and not(aNode is None):
+                if aNode.type == "evalexp":
+                    aNode.type = "print"
+
+                self.eval_sentence(aNode, env)
+
+
 
 
 
             
 if __name__ == '__main__':
     
-    say_hello()
+
+    evaluator = Evaluator(GUI=False)
+    evaluator.say_hello()
 
     env = {}
 
@@ -910,13 +931,14 @@ if __name__ == '__main__':
         try:
             s = input('[%d] $ ' % My_lineno)
             My_lineno += 1
+            
         except EOFError:
             break
 
-        if valid_occurs(s, 'begin'):
+        if evaluator.valid_occurs(s, 'begin'):
 
-            nest += count_keyword(s, 'begin')
-            nest -= count_keyword(s, 'end')
+            nest += evaluator.count_keyword(s, 'begin')
+            nest -= evaluator.count_keyword(s, 'end')
 
             while nest>0:
                 s1 = input('[%d] > ' % My_lineno)
@@ -924,8 +946,8 @@ if __name__ == '__main__':
 
                 s += "\n " + s1
 
-                nest += count_keyword(s1, 'begin')
-                nest -= count_keyword(s1, 'end')
+                nest += evaluator.count_keyword(s1, 'begin')
+                nest -= evaluator.count_keyword(s1, 'end')
 
         if not s:
             continue
@@ -938,7 +960,7 @@ if __name__ == '__main__':
             if aNode.type == "evalexp":
                 aNode.type = "print"
             
-            eval_sentence(aNode, env)
+            evaluator.eval_sentence(aNode, env)
         
 
 

@@ -128,7 +128,7 @@ end
 
 ## 引数の値を一つ増やす
 ```
-# プログラム開始
+# 引数の値を一つ増やす
 procedure z:= oneUp(a): begin
   b:=a;
   b++;
@@ -151,7 +151,7 @@ end
 
 ## 素数判定
 ```
-# プログラム開始
+# 素数判定
 procedure  z:= isPrime(n): begin
   z:=1;
   w:=2;
@@ -174,7 +174,7 @@ end
 
 ## n番目の素数を求める
 ```
-# プログラム開始
+# n番目の素数を求める
 procedure  z:= isPrime(n): begin
   z:=1;
   w:=2;
@@ -220,7 +220,7 @@ end
 ヘッドの内部状態:q0
 
 ```
-# プログラム開始
+# チューリングマシン（単能）
 begin
   # 初期状態の設定
   x0:=["▷", "1", "1", "1"];
@@ -261,7 +261,7 @@ end
 ## 階乗（再帰関数の例です）
 
 ```
-# プログラム開始
+# 階乗（再帰関数の例です）
 procedure z:=fact(n): begin
   if n=0 then begin
     z:=1
@@ -282,7 +282,7 @@ end
 
 ## スタック
 ```
-# プログラム開始
+# スタック
 procedure z:=mkStack(): begin
   z:=[0,[0]]
 end
@@ -350,7 +350,7 @@ end
 ## 階乗（スタックを用いた再帰なし版）
 
 ```
-# プログラム開始
+# スタック
 procedure z:=mkStack(): begin
   z:=[0,[0]]
 end
@@ -381,7 +381,7 @@ procedure z:=top(s): begin
 end
 
 
-# 再帰なしの階乗
+# 階乗（スタックを用いた再帰なし版）
 procedure z:=Fact(n): begin
   task := mkStack();
   retval := mkStack();

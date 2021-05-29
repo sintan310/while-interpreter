@@ -16,7 +16,7 @@
 
 - Windows 10(64bit), Python 3.7.7 （Python3 はもっと低いバージョンでも動くと思います）
 
-プログラムのソースは source フォルダに入っています。Python3 にて MainWindow.pyw を実行してください：
+プログラムのソースは sources フォルダに入っています。Python3 にて MainWindow.pyw を実行してください：
 
 ```
 py MainWindow.pyw

@@ -486,7 +486,7 @@ class Evaluator:
             value_key = value.keys()
             for i in range(0, max(value_key) + 1):
                 if i in value_key:
-                    retstr = pretty_print_valueue(value[i])
+                    retstr = self.pretty_print_value(value[i])
                 else:
                     retstr = "0"
 

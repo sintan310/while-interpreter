@@ -32,9 +32,6 @@ class QCodeEditor(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
 
-        self._font = QFont()
-        self._font.setPixelSize(20)
-        self.setFont(self._font)
         
     def lineNumberAreaWidth(self):
         """

@@ -12,9 +12,9 @@
 
 ## 必要環境
 
-動作確認は以下の環境で行っています：
+動作確認は以下の環境で行っています（Python3 はもっと低いバージョンでも動くと思います）：
 
-- Windows 10(64bit), Python 3.7.7 （Python3 はもっと低いバージョンでも動くと思います）
+- Windows 10(64bit), Python 3.7.7
 - Ubuntu 20.04.2 LTS, Python 3.8.5
 
 プログラムのソースは sources フォルダに入っています。Python3 にて MainWindow.pyw を実行してください：

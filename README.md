@@ -26,7 +26,7 @@ py MainWindow.pyw
 pip コマンドでインストールしてください：
 
 ```
-pip install PySide2, ply
+pip install PySide2 ply
 ```
 
 ### Windows10 向け実行ファイル

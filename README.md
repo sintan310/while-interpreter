@@ -34,7 +34,7 @@ pip install PySide2 ply
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。
 右側の「Releases」 v1.0 のリリース（または下記リンク）から while-v1.0-release-Win10-64bit.zip を入手し、
 展開してから  while-v1.0-release-Win10-64bit.exe をダブルクリックして使ってください：
-https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0-release/while-v1.0-release-Win10-64bit.zip
+https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0.1-release/while-v1.0-release-Win10-64bit.zip
 
 
 

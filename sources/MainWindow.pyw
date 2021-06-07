@@ -12,127 +12,94 @@
 
 import sys
 import os
+import copy
 
-from PySide2.QtCore import Qt, QSize, Signal, QMutex, \
-    QMutexLocker, QThread, QCoreApplication, QSettings
+from PySide2.QtCore import (Qt, QSize, 
+                            QSettings, QEvent)
 from PySide2.QtGui import QFont
-from PySide2.QtWidgets import QWidget, QPushButton, QSizePolicy, \
-    QTextEdit, QGridLayout, QSplitter, QMainWindow, QStatusBar, \
-    QAction, QFontDialog, QMessageBox, QApplication
+from PySide2.QtWidgets import (QWidget, QPushButton, 
+                               QTextEdit, QGridLayout, QVBoxLayout, QSplitter,
+                               QMainWindow, QStatusBar,
+                               QAction, QFontDialog, QMessageBox,
+                               QApplication, QToolBar, QToolButton,
+                               QDockWidget, QStyle, QFrame)
 
 from QCodeEditor import QCodeEditor
-
-import evaluator
+from TableView import TableView
+from MyThread import MyThread
 
 CONFIG_FILE = 'config.ini'
 
 
-#---------------------------------------------------------------------------
-class MyThread(QThread):
-    # Create signals 
-    stopped_value = Signal(bool)
-    message_value = Signal(str)
 
-    
-    def __init__(self, parent=None, callback=None):
-        super(MyThread, self).__init__(parent)
-        self.stopped = False
-        self.mutex = QMutex()
-        self.evaluator = evaluator.Evaluator(GUI=True,
-                                             callback=self.emit_message)
-        
-    def __del__(self):
-        # Threadオブジェクトが削除されたときにThreadを停止する
-        print("deleted")
-        
-        #self.result_value.emit(False)
-        #self.stop()
-        #self.wait()
+class History:
+    def __init__(self):
+
+        self.generation = 0
+        self.history = []
+
         
 
-    def setup(self, sentences):
-        self.stopped = True
-        self.sentences = sentences
+    def set_firstGeneration(self, elem):
+        self.generation = 1
+        self.history = []
+        self.history.append(elem)
+
         
+    def set_elem(self, elem):
+        self.history.append(elem)
+        self.generation += 1
 
-    def stop(self):
-        with QMutexLocker(self.mutex):
-            self.stopped = True
 
-        self.stopped_value.emit(self.stopped)
+        
+    def get_elem(self, generation=None):
+        if generation == None:
+            generation = self.generation
+
+                   
+        return self.history[generation-1]
+
+    def get_elem_previous(self, generation=None):
+        if generation == None:
+            generation = self.generation
+
+        return self.history[generation-2]
 
             
-    def restart(self):
-        with QMutexLocker(self.mutex):
-            self.stopped = False
-            
-
-    def emit_message(self, mes):
-        # processEvents は、スレッド内で行い、MainWindows に処理を渡す
-        # このようにしないと、バッファが溜まってしまう？、らしい？
-        QThread.msleep(1)
-        self.message_value.emit(mes)
-        QCoreApplication.processEvents()  
+    def is_theFirstGeneration(self):
+        if self.generation > 1:
+            return False
+        else:
+            return True
+        
+    def is_theLatestGeneration(self):
+        if self.generation == len(self.history):
+            return True
+        else:
+            return False
+        
+    def set_nextGeneration(self):
+        self.generation += 1
 
         
-    def run(self):
-        if self.stopped:
-            self.restart()
-            self.evaluator.evaluator(self.sentences)
-            self.stop()
-            
+    def set_previousGeneration(self):
+        self.generation -= 1
         
+    def init_generation(self):
+        # 0世代
+        self.generation = 0
         
-
-
 #---------------------------------------------------------------------------
 class CentralWidget(QWidget):
     
     def __init__(self, parent=None):
-        super(CentralWidget, self).__init__(parent)
-        self.setupUi()
-        self.setAcceptDrops(True)
-        self.setupThread()   
-
+        super().__init__(parent)
+        self.setup_Ui()
+        # self.setAcceptDrops(True)
                 
-    def keyPressEvent(self, event):
-        # print('keyPressEvent, key = %s.' % event.key())
-
-        # Ctrl と Enter の同時押し
-        if event.modifiers() & Qt.ControlModifier and \
-           event.key() == Qt.Key_Return:
-            self.pushButton_start.click()
+        
+    def setup_Ui(self):
                         
-        else:
-            # 自分が処理しない場合は、オーバーライド元の処理を実行
-            super().keyPressEvent(event)
-
-                
-    def setupThread(self):
-        self.thread = MyThread(parent=self)
-        self.thread.stopped_value.connect(self.enable_start_button)
-        self.thread.message_value.connect(self.add_messages)
-
-        
-    def setupUi(self):
-                
-        # 実行ボタン
-        self.pushButton_start = QPushButton("実行")
-        #self.connect(self.pushButton_start,
-        #             SIGNAL("clicked()"), self.run_selection)
-        self.pushButton_start.clicked.connect(self.run_selection)
-        
-        self.pushButton_start.setSizePolicy(QSizePolicy.Preferred,
-                                            QSizePolicy.Fixed)
-
-        
-        # 強制終了ボタン
-        self.pushButton_stop = QPushButton("強制終了")
-        self.pushButton_stop.clicked.connect(self.stop)
-        self.pushButton_stop.setSizePolicy(QSizePolicy.Fixed,
-                                            QSizePolicy.Fixed)
-        self.pushButton_stop.setEnabled(False)
-
         # プログラム入力用
         #self.editor = QTextEdit()
         #self.editor = QPlainTextEdit()
@@ -142,79 +109,65 @@ class CentralWidget(QWidget):
         
         
         # 実行結果の表示用
-        #self.messages = QTextBrowser()
-        self.messages = QTextEdit()
-        self.messages.setReadOnly(True)
-        self.messages.setUndoRedoEnabled(False)
-        self.messages.setStyleSheet("background-color: #e0e0e0")
+        #self.messageArea = QTextBrowser()
+        self.messageArea = QTextEdit()
+        self.messageArea.setReadOnly(True)
+        self.messageArea.setUndoRedoEnabled(False)
+        self.messageArea.setStyleSheet("background-color: #e0e0e0")
 
         rowHeight = self.fontMetrics().lineSpacing()
-        self.messages.setMinimumHeight(rowHeight * 1)
+        self.messageArea.setMinimumHeight(rowHeight * 1)
 
+
+        
         
         # メイン画面に部品を配置する
         layout = QGridLayout()
-        layout.setSpacing(10)
+        layout.setSpacing(0)
+        layout.setContentsMargins(5,0,5,5 )
 
-        self.splitter = QSplitter(Qt.Vertical)
-        self.splitter.setObjectName("splitter1")        
+        self.splitter = QSplitter()
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
+        self.splitter.setObjectName("splitter")        
         self.splitter.setHandleWidth(1)
+
         self.splitter.addWidget(self.editor)
-        self.splitter.addWidget(self.messages)
+        self.splitter.addWidget(self.messageArea)
         self.splitter.setStretchFactor(0,3)
         self.splitter.setStretchFactor(1,1)
         self.splitter.setChildrenCollapsible(False)
         
-
-        layout.addWidget(self.splitter, 0, 0, 10, 1)
-        
-        layout.addWidget(self.pushButton_start, 0, 2)
-        layout.addWidget(self.pushButton_stop,  1, 2)
+        layout.addWidget(self.splitter)
         
         self.setLayout(layout)
-
         
-        
-    def enable_start_button(self):
-        self.pushButton_start.setEnabled(True)
-        self.pushButton_stop.setEnabled(False)
-
-    def disable_start_button(self):
-        self.pushButton_start.setEnabled(False)
-        self.pushButton_stop.setEnabled(True)
-        
-        
-    def reset_buttons(self):
-        self.pushButton_start.setChecked(False)
-        return 0
-
-    def stop(self):
-        # sys.exit()
-        # QCoreApplication.processEvents()
-        
-        self.thread.terminate()
-        self.thread.wait()
-        self.thread.stop()
-        self.add_messages("強制終了されました");
-                
-
+       
+    # public methods
     def add_messages(self, mes):
-        cursor = self.messages.textCursor()
+        cursor = self.messageArea.textCursor()
         cursor.insertText(mes + "\n")
 
 
-        
-    def run_selection(self):
+    def clear_messages(self):
+        self.messageArea.clear()
 
-        self.messages.clear()
-        self.disable_start_button()
-        
-        textboxValue = self.editor.toPlainText()
-        self.thread.setup(textboxValue)
-        
-        self.thread.start()
+
+    def get_program(self):
+        return self.editor.toPlainText()
+
     
+    def set_HighlightLine(self, lineno):
+        self.editor.setHighlightLineno(lineno)
+        self.editor.highlightLine()
+        
+    def clear_HighlightLine(self):
+        self.editor.clearHighlightLine()
 
+    def set_ReadOnly(self, flag):
+        self.editor.setReadOnly(flag)
+        if flag:
+            self.editor.setExtraSelections([])
+            
 
 
     
@@ -233,33 +186,448 @@ class MainWindow(QMainWindow):
         #self.statusBar.showMessage('')
 
         # Menu Bar
-        self.exit_menu = self.menuBar().addMenu('ファイル')
+        self.setup_MenuBar()
 
-        self.exitAct = QAction('フォントの選択', self,
-                                         statusTip='フォントの選択',
-                                         triggered=self.select_font)        
-        self.exit_menu.addAction(self.exitAct)
+        # ツールバー
+        self.setup_ToolBar()
 
-        self.exitAct = QAction('終了する', self,
-                                         shortcut="Ctrl+Q",
-                                         statusTip='終了する',
-                                         triggered=self.close)        
-        self.exit_menu.addAction(self.exitAct)
-        
-        self.help_menu = self.menuBar().addMenu('このソフトウェアの使い方')
-        self.aboutAct = QAction('使い方', self, statusTip='使い方', triggered=self.about)
-        self.help_menu.addAction(self.aboutAct)
+        # ドック
+        self.setup_Dock()
 
         # Central Widget
-        self.central_widget = CentralWidget(parent=parent)
-        self.setCentralWidget(self.central_widget)
-        widget_layout = QGridLayout()
-        widget_layout.addWidget(self)
-        self.setLayout(widget_layout)
+        self.centralWidget = CentralWidget(parent=parent)
+        self.setCentralWidget(self.centralWidget)
 
+        # main 関数で focus をもらうため（すべて表示し終わった main 内で実行させる）
+        self.focusWidget = self.centralWidget.editor
+        
+        # MainWindow を配置
+        layout = QGridLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0,0,0,0)
+        
+        layout.addWidget(self)
+        self.setLayout(layout)
+       
+        
+        # スレッド
+        self.thread = MyThread(parent=self)
+        self.thread.stopped_value.connect(self.eval_finished)
+        self.thread.message_value.connect(self.centralWidget.add_messages)
+
+        
+        # Settings 処理
         self.loadSettings()
 
 
+        # public ---------------------------
+        # メンバ変数
+
+        # 閉じるときに設定を保存する
+        self.resetConfigFlag = True
+
+        # Env の History
+        self.history = History()
+        
+        
+        
+    # -----------------------------------------------------------------
+    # ドック関連
+    # -----------------------------------------------------------------
+    def setup_Dock(self):
+        # 環境表示用
+        self.tableView = TableView()
+
+
+        # ボタン群レイアウト
+        layout = QGridLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0,0,0,0)
+        
+        self.startDebugButton = QPushButton()
+        self.startDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.startDebugButton.clicked.connect(self.set_program)
+        self.startDebugButton.setCheckable(False)  
+        
+        self.stopDebugButton = QPushButton()
+        self.stopDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.stopDebugButton.setEnabled(False)
+        self.stopDebugButton.setCheckable(False)  
+        self.stopDebugButton.clicked.connect(self.stop_debug)
+
+        self.rewindDebugButton = QPushButton()
+        self.rewindDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
+        self.rewindDebugButton.clicked.connect(self.rewind_program)
+        self.rewindDebugButton.setEnabled(False)
+        self.rewindDebugButton.setCheckable(False)  
+        
+        self.onestepDebugButton = QPushButton()
+        self.onestepDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
+        self.onestepDebugButton.clicked.connect(self.run_program_onestep)
+        self.onestepDebugButton.setEnabled(False)
+        self.onestepDebugButton.setCheckable(False)  
+
+
+        line = QFrame(self)
+        line.setFrameShape(QFrame.VLine)
+        line.setFrameShadow(QFrame.Plain)
+ 
+        
+        layout.addWidget(self.startDebugButton,0,0)
+        layout.addWidget(self.stopDebugButton,0,1)
+        layout.addWidget(line,0,2)        
+        layout.addWidget(self.rewindDebugButton,0,3)
+        layout.addWidget(self.onestepDebugButton,0,4)
+
+        # ボタン群レイアウト layout を widget として扱えるようにする
+        buttonsWidget = QWidget()
+        buttonsWidget.setLayout(layout)
+        buttonsWidget.setContentsMargins(0,0,0,0)
+
+
+        # layoutV に、ボタン群 widget と self.tableView を縦方向に追加
+        layoutV = QVBoxLayout()
+        layoutV.setSpacing(0)
+        layoutV.setContentsMargins(0,0,0,0)
+        layoutV.addWidget(buttonsWidget)        
+        layoutV.addWidget(self.tableView)
+        
+        debugWidget = QWidget()
+        debugWidget.setLayout(layoutV)
+        debugWidget.setContentsMargins(0,0,0,0)
+        
+
+        # Dock の作成
+        self.addDock = QDockWidget('デバッグ', self)        
+        self.addDock.setObjectName("dock")        
+        self.addDock.setWidget(debugWidget)
+        self.addDock.setContentsMargins(0,0,0,0)
+                
+        self.addDock.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.addDock)
+        self.addDock.installEventFilter(self)        
+
+
+    def show_Dock(self):
+        self.addDock.show()
+        self.debugAct.setEnabled(False)
+
+        
+    def eventFilter(self, source, event):
+        if (event.type() == QEvent.Close and \
+            isinstance(source, QDockWidget)):
+            #print(source.windowTitle())
+            #print(source.objectName())
+            self.debugAct.setEnabled(True)
+            
+            
+        return super().eventFilter(source, event)
+
+    
+        
+        
+    # -----------------------------------------------------------------
+    # メニュー関連
+    # -----------------------------------------------------------------
+    def setup_MenuBar(self):
+
+        # ファイルメニュー
+        self.file_menu = self.menuBar().addMenu('ファイル')
+
+        self.exitAct = QAction('終了する', self,
+                                         #shortcut="Ctrl+Q",
+                                         statusTip='終了する',
+                                         triggered=self.close)        
+        self.file_menu.addAction(self.exitAct)
+
+        
+        # ツールメニュー
+        self.tool_menu = self.menuBar().addMenu('ツール')
+
+        self.selectFontAct = QAction('フォントの選択', self,
+                                         statusTip='フォントの選択',
+                                         triggered=self.select_font)        
+        self.tool_menu.addAction(self.selectFontAct)
+        
+        self.debugAct = QAction('デバッグの表示', self,
+                                         statusTip='デバッグ',
+                                         triggered=self.show_Dock)        
+        self.tool_menu.addAction(self.debugAct)
+        self.debugAct.setEnabled(False)
+        
+        
+        # ヘルプメニュー
+        self.help_menu = self.menuBar().addMenu('ヘルプ')
+
+        self.resetConfigAct = QAction('配置設定の初期化', self,
+                                      statusTip='配置設定の初期化',
+                                      triggered=self.resetConfig)
+        self.help_menu.addAction(self.resetConfigAct)
+
+        
+        self.aboutAct = QAction('使い方', self, statusTip='使い方',
+                                triggered=self.about)
+        self.help_menu.addAction(self.aboutAct)
+        
+
+    def about(self):
+        QMessageBox.about(self, "このソフトウェアについて",
+            "ソフトウェアの使い方については、同梱されている「README」などを参照してください。")
+
+    def resetConfig(self):
+        reply = QMessageBox.question(self, 'UI 配置の初期化', 
+                                     'UI 配置情報の設定ファイルを削除しますか？',
+                                     QMessageBox.Yes, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            self.resetConfigFlag = False
+            os.remove(CONFIG_FILE)
+            QMessageBox.about(self, "設定ファイルの削除",
+            "UI 配置情報の設定ファイルを削除しました。アプリを再起動すると、UI の配置が初期化されます")
+            
+            
+            
+
+    # -----------------------------------------------------------------
+    # ツールバー関連
+    # -----------------------------------------------------------------
+    def setup_ToolBar(self):
+        toolBar = QToolBar()
+        toolBar.setStyleSheet("QToolBar{spacing:10px; padding: 5px;}")
+        toolBar.setObjectName("toolbar")        
+        
+        
+        self.addToolBar(toolBar)
+
+        self.startButton = QToolButton()
+        self.startButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        #self.startButton.setAutoRaise(True)
+        self.startButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.startButton.clicked.connect(self.run_program)
+        toolBar.addWidget(self.startButton)        
+
+        self.stopButton = QToolButton()
+        self.stopButton.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.stopButton.clicked.connect(self.stop_program)
+        self.stopButton.setEnabled(False)
+        toolBar.addWidget(self.stopButton)        
+
+
+        
+
+    # -----------------------------------------------------------------
+    # スロット
+    # -----------------------------------------------------------------
+    def stop_debug(self):
+        self.stopDebugButton.setEnabled(False)
+        self.startDebugButton.setEnabled(True)
+        self.onestepDebugButton.setEnabled(False)
+
+        self.enable_startButton()
+        
+        self.centralWidget.set_ReadOnly(False)
+        self.centralWidget.clear_HighlightLine()
+        self.tableView.set_data({})
+
+        
+        if self.thread.isRunning():
+            self.thread.terminate()
+            self.thread.wait()
+            self.thread.stop()
+            
+        
+        
+    def set_program(self):
+        textboxValue = self.centralWidget.get_program()        
+        first_executable_lineno = self.thread.setup(textboxValue)
+        
+        if self.thread.evaluatorInfo['noerror']:
+            self.tableView.set_data({})
+            self.centralWidget.clear_messages()
+            
+            self.startDebugButton.setEnabled(False)
+            self.stopDebugButton.setEnabled(True)
+            self.onestepDebugButton.setEnabled(True)
+
+            self.startButton.setEnabled(False)
+            
+            self.centralWidget.set_HighlightLine(first_executable_lineno)
+            self.centralWidget.set_ReadOnly(True)
+
+            self.history.set_firstGeneration({'env':{},
+                                              'lineno':first_executable_lineno})
+            
+            # oneStep 実行を有効化
+            self.thread.oneStep = True
+
+
+    def rewind_program(self):
+
+        self.onestepDebugButton.setEnabled(True)
+                
+        self.history.set_previousGeneration()
+        
+        current = self.history.get_elem()
+        self.centralWidget.set_HighlightLine(current['lineno'])
+        
+        if self.history.is_theFirstGeneration():
+
+            # self.history.init_generation()
+            self.tableView.set_data({})
+            self.rewindDebugButton.setEnabled(False)
+            
+            
+        else:
+            previous = self.history.get_elem_previous()
+            self.tableView.set_data(current['env'], previous['env'])
+
+    
+
+    def run_program_onestep(self):
+        
+        if self.history.is_theLatestGeneration():
+            self.startDebugButton.setEnabled(False)
+            self.rewindDebugButton.setEnabled(True)
+            self.thread.start()
+
+        else:
+            self.history.set_nextGeneration()
+            current = self.history.get_elem()
+            self.tableView.set_data(current['env'])
+            
+            self.centralWidget.set_HighlightLine(current['lineno'])
+            
+            if self.history.is_theLatestGeneration():
+                if current['lineno'] == 0:
+                
+                    # 最終世代だったら 
+                    self.onestepDebugButton.setEnabled(False)
+                    self.rewindDebugButton.setEnabled(True)
+            
+                else:                    
+                    self.onestepDebugButton.setEnabled(True)
+                    self.rewindDebugButton.setEnabled(True)
+        
+            
+
+
+        
+    def run_program(self):
+        self.centralWidget.clear_messages()
+        
+        program = self.centralWidget.get_program()
+        self.thread.setup(program)
+        
+        if self.thread.evaluatorInfo['noerror']:
+            self.stop_debug()
+
+            self.centralWidget.set_ReadOnly(False)
+
+            self.disable_startButton()
+            self.onestepDebugButton.setEnabled(False)
+
+            self.centralWidget.clear_HighlightLine()
+
+            self.thread.oneStep = False
+            self.thread.start()
+
+
+
+
+        
+    def stop_program(self):
+        # sys.exit()
+        # QCoreApplication.processEvents()
+        
+        self.thread.terminate()
+        self.thread.wait()
+        self.thread.stop()
+        self.centralWidget.add_messages("強制終了されました");
+                
+
+
+    def eval_finished(self):
+
+        evaluatorInfo = self.thread.evaluatorInfo
+        try:
+            self.tableView.set_data(evaluatorInfo['env'])
+            
+        except:
+            self.tableView.set_data({})
+
+            
+        if self.thread.oneStep == False:
+            # 通常実行
+            self.enable_startButton()
+
+        else:
+            # oneStep 実行
+
+            # history に追加
+            self.history.set_elem({'env':copy.deepcopy(evaluatorInfo['env']),
+            #self.history.set_elem({'env':evaluatorInfo['env'],
+                                   'lineno':evaluatorInfo['lineno']})
+
+
+            
+            if evaluatorInfo['empty']:
+                # もう実行するものがない場合
+
+                #self.startDebugButton.setEnabled(True)
+                self.onestepDebugButton.setEnabled(False)
+                #self.stopDebugButton.setEnabled(False)
+
+                #self.centralWidget.set_ReadOnly(False)
+                self.centralWidget.clear_HighlightLine()
+                QMessageBox.information(self,
+                                        "プログラム実行の終了",
+                                        "すべてのプログラムが実行されました。",
+                                        QMessageBox.Ok)
+
+            else:
+                # self.startDebugButton.setEnabled(True)
+                self.centralWidget.set_HighlightLine(evaluatorInfo['lineno'])
+            
+            
+        
+        
+    # -----------------------------------------------------------------
+    # スタートボタンの依存関連
+    # -----------------------------------------------------------------
+    def enable_startButton(self):
+        self.startButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        self.centralWidget.set_ReadOnly(False)
+        self.centralWidget.editor.highlightCurrentLine()
+        
+
+    def disable_startButton(self):
+        self.startButton.setEnabled(False)
+        self.stopButton.setEnabled(True)
+        self.centralWidget.set_ReadOnly(True)
+
+
+
+    # -----------------------------------------------------------------
+    # キー入力時のショートカット
+    # -----------------------------------------------------------------        
+    def keyPressEvent(self, event):
+        # print('keyPressEvent, key = %s.' % event.key())
+
+        # Ctrl と Enter の同時押し
+        if event.modifiers() & Qt.ControlModifier and \
+           event.key() == Qt.Key_Return:
+            self.startButton.click()
+                        
+        else:
+            # 自分が処理しない場合は、オーバーライド元の処理を実行
+            super().keyPressEvent(event)
+
+        
+
+    # -----------------------------------------------------------------
+    # Setting 処理
+    # -----------------------------------------------------------------        
     def closeEvent(self, e):
         self.saveSettings()
 
@@ -267,10 +635,10 @@ class MainWindow(QMainWindow):
     def initSettings(self):
         # Window Size
         # self.setFixedSize(750, 700)
-        self.resize(600, 400)
+        self.resize(800, 600)
 
         # font
-        c = self.central_widget.editor.textCursor()
+        c = self.centralWidget.editor.textCursor()
         current_font = c.charFormat().font()
         current_font.setPointSize(12)
         self.update_font(current_font)
@@ -286,11 +654,12 @@ class MainWindow(QMainWindow):
         setting = QSettings(CONFIG_FILE, QSettings.IniFormat)
 
         # splitter の位置を復帰        
-        self.central_widget.splitter.restoreState(setting.value(self.central_widget.splitter.objectName()))
+        self.centralWidget.splitter.restoreState(setting.value(self.centralWidget.splitter.objectName()))
 
         # GUIの位置を復帰
         self.restoreGeometry(setting.value("geometry"))
-
+        self.restoreState(setting.value("windowState"))
+        
         # Font
         try:
             font_family = setting.value("font_family")
@@ -302,19 +671,28 @@ class MainWindow(QMainWindow):
         except:
             pass
         
+        # tableview の第1列の幅
+        width = setting.value("tableview_column_width")
+        self.tableView.set_HeaddaColumnWidth(int(width))
         
-        
+                
     def saveSettings(self):
+        if self.resetConfigFlag == False:
+            return
+
+        
         setting = QSettings(CONFIG_FILE, QSettings.IniFormat)
 
-        # Splitterの位置保存
-        setting.setValue(self.central_widget.splitter.objectName(),
-                         self.central_widget.splitter.saveState())
-        # UIの位置保存
+        # Splitterの位置
+        setting.setValue(self.centralWidget.splitter.objectName(),
+                         self.centralWidget.splitter.saveState())
+        
+        # UIの位置
         setting.setValue("geometry", self.saveGeometry())
+        setting.setValue("windowState", self.saveState())
 
-        # font 情報（QTextEdit からの取得はうまくできない）
-        c = self.central_widget.editor.textCursor()
+        # font 情報（QTextEdit からの取得はうまくできなかった）
+        c = self.centralWidget.editor.textCursor()
         current_font = c.charFormat().font()
 
         font_family = current_font.family()
@@ -324,11 +702,17 @@ class MainWindow(QMainWindow):
         setting.setValue("font_size", font_size)
         setting.setValue("font_weight", font_weight)
 
+        # tableview の第1列の幅
+        width = self.tableView.get_HeaddaColumnWidth()
+        setting.setValue("tableview_column_width", width)
+        
+
         
         
     def update_font(self, font):
-        self.central_widget.editor.setFont(font)
-        self.central_widget.messages.setFont(font)
+        self.centralWidget.editor.setFont(font)
+        self.centralWidget.messageArea.setFont(font)
+        self.tableView.set_font(font)
         #self.central_widget.pushButton_start.setFont(font)
         #self.central_widget.pushButton_stop.setFont(font)
         #self.central_widget.pushButton_reset.setFont(font)
@@ -338,7 +722,7 @@ class MainWindow(QMainWindow):
 
     def select_font(self):
         # QPlainTextEdit から取得する場合
-        c = self.central_widget.editor.textCursor()
+        c = self.centralWidget.editor.textCursor()
         current_font = c.charFormat().font()
         
         # QTextEdit から取得する場合（うまく行かない）
@@ -356,10 +740,9 @@ class MainWindow(QMainWindow):
             self.update_font(font)
             
             
-    def about(self):
-        QMessageBox.about(self, "このソフトウェアについて",
-            "ソフトウェアの使い方については、同梱されている「README」などを参照してください。"
-)
+
+        
+        
 #-- --------------------------------------------------------- --#
 #-- --------------------------------------------------------- --#
 #-- --------------------------------------------------------- --#
@@ -377,6 +760,9 @@ def main():
     mainwindow = MainWindow()
     mainwindow.show()
 
+    mainwindow.focusWidget.setFocus()
+ 
+    
     sys.exit(app.exec_())
 
 

@@ -1,14 +1,19 @@
-#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+#
 # QcodeEditor.py by acbetter.
 # https://stackoverflow.com/questions/40386194/create-text-area-textedit-with-line-number-in-pyqt
 #
-# Editted to fit it in PySide2 by Shinya Sato (25th May 2021)
+# Editted by Shinya Sato (3 June 2021)
+# - to fit it in PySide2
+# - to fix the lineNumberAreaWidth
+# - to add another highlightLine for one-step execution
+#   in hightlightLine and highlightCurrentLine functions
 
-# -*- coding: utf-8 -*-
 
 from PySide2.QtCore import Qt, QRect, QSize
 from PySide2.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
-from PySide2.QtGui import QColor, QPainter, QTextFormat, QFont
+from PySide2.QtGui import (QColor, QPainter, QTextFormat, QTextBlockFormat,
+                           QFont, QTextCursor)
 
 
 class QLineNumberArea(QWidget):
@@ -31,6 +36,15 @@ class QCodeEditor(QPlainTextEdit):
         self.updateRequest.connect(self.updateLineNumberArea)
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
+        
+        self.hlineno = 0
+
+        self.format_normal = QTextBlockFormat()
+        self.format_normal.setBackground(Qt.white)
+
+        self.format_onestep = QTextBlockFormat()
+        self.format_onestep.setBackground(QColor(Qt.green).lighter(160))
+        
 
         
     def lineNumberAreaWidth(self):
@@ -61,17 +75,76 @@ class QCodeEditor(QPlainTextEdit):
         cr = self.contentsRect()
         self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
 
+
+    def clearHighlightLine(self):
+        #cursor = self.textCursor()
+        #cursor.movePosition(QTextCursor.Start)
+        #cursor.movePosition(QTextCursor.NextBlock,
+        #                    QTextCursor.MoveAnchor,
+        #                    self.hlineno - 1)
+
+        if self.hlineno > 0:
+            cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
+            self.setTextCursor(cursor)                
+            self.hlineno = 0
+            
+        self.highlightLine()
+        self.highlightCurrentLine()
+        
+        
+    def setHighlightLineno(self, lineno):            
+        self.hlineno = lineno
+        self.highlightLine()
+        
+
+    def highlightLine(self):
+
+        # 全画面を選択しておき、白の背景色にする
+        cursor = self.textCursor()
+        cursor.select(QTextCursor.Document)
+        cursor.setBlockFormat(self.format_normal)
+        
+        # current cursor を移動させて、画面を自動的にスクロールさせる
+        if self.hlineno > 0:
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.Start)
+            cursor.movePosition(QTextCursor.NextBlock,
+                                QTextCursor.MoveAnchor,
+                                self.hlineno - 1)
+            self.setTextCursor(cursor)
+
+
+            # hlineno をハイライト表示
+            cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
+            cursor.setBlockFormat(self.format_onestep)
+                             
+        return
+        
+
+        
     def highlightCurrentLine(self):
         extraSelections = []
-        if not self.isReadOnly():
-            selection = QTextEdit.ExtraSelection()
-            lineColor = QColor(Qt.yellow).lighter(160)
-            selection.format.setBackground(lineColor)
-            selection.format.setProperty(QTextFormat.FullWidthSelection, True)
-            selection.cursor = self.textCursor()
-            selection.cursor.clearSelection()
-            extraSelections.append(selection)
-        self.setExtraSelections(extraSelections)
+
+        if self.hlineno > 0:
+            pass
+            
+        else:
+            if not self.isReadOnly():
+
+                selection = QTextEdit.ExtraSelection()
+                lineColor = QColor(Qt.yellow).lighter(160)
+                selection.format.setBackground(lineColor)
+                selection.format.setProperty(QTextFormat.FullWidthSelection,
+                                             True)
+                selection.cursor = self.textCursor()
+                selection.cursor.clearSelection()
+                extraSelections.append(selection)
+                self.setExtraSelections(extraSelections)
+
+        
+
+
+            
 
     def lineNumberAreaPaintEvent(self, event):
         painter = QPainter(self.lineNumberArea)

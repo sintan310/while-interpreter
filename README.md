@@ -114,6 +114,7 @@ begin
 end
 ```
 
+![screenshot8](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot8.png)
 
 ※プログラムの実行は、「実行」ボタンを押す代わりに
 キーボードショートカット Ctrl+Enter でも行えます。

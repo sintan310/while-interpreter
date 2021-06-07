@@ -578,8 +578,6 @@ class Evaluator:
         
     def eval_sentence(self, aNode, cnt, env):
         global GUI_mode, My_lineno
-
-        print(env)
         
         if aNode.type == 'binop':
             if aNode.leaf == ":=":

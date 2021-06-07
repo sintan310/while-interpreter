@@ -45,7 +45,7 @@ https://github.com/shinnya-sato/while-interpreter/releases/download/v1.1-release
 - 灰色のものには実行結果が表示されます。
 
 背景が白い方にプログラム ```print(23)``` を入力し、
-画面上部に見えるツールバーの ▶ボタンを押して実行してみましょう。
+画面上部のツールバーにある ▶ボタンを押して実行してみましょう。
 実行結果のところに ```23``` と表示されます。
 
 ![screenshot2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot3.png)

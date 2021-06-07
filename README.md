@@ -45,13 +45,13 @@ https://github.com/shinnya-sato/while-interpreter/releases/download/v1.1-release
 - 灰色のものには実行結果が表示されます。
 
 背景が白い方にプログラム ```print(23)``` を入力し、
-画面上部のツールバーにある ▶ボタンを押して実行してみましょう。
+画面上部のツールバーにある ```▶``` ボタンを押して実行してみましょう。
 実行結果のところに ```23``` と表示されます。
 
 ![screenshot2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot3.png)
 
 なお、正しく入力されていないときにはエラーが表示されますので、
-訂正してもう一度 ▶ボタンを押してください。
+訂正してもう一度 ```▶``` ボタンを押してください。
 
 複数の文を実行するときには複合文 begin ～ end を使います。
 例えば、変数 ```x``` に ```23+10``` の結果を代入し、``x`` の値を表示するには
@@ -74,7 +74,7 @@ begin ～ end で囲まれていることが分かりやすいように
 （Tabキーを使っても良いです）。
 
 右側のデバッグドッグを使うと、1行ずつ実行できます。
-まず、「デバッグ」と書いてあるところにある実行ボタン ▶を押し、
+まず、「デバッグ」と書いてあるところにある実行ボタン ```▶``` を押し、
 デバッグモードにしてみましょう。
 下図のように、「次に実行される候補」の行が緑色で表示されます：
 
@@ -85,8 +85,14 @@ begin ～ end で囲まれていることが分かりやすいように
 
 ![screenshot6](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6.png)
 
+```▶▶``` ボタンを何度か押して、2行目を実行してみましょう。
+変数 x に 33 が代入されますので、「デバッグ」の「名前」「値」に ```x``` と ```33``` が追加されます。
+このように、デバッグモードでは、プログラムの実行が一つ一つ確認できます。
+
+![screenshot6-2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6-2.png)
+
 デバッグモード中は、プログラムを編集できません。
-デバッグモードの終了は、「デバッグ」と書いてあるところの■ボタンを押してください。
+デバッグモードの終了は、「デバッグ」と書いてあるところの ```■``` ボタンを押してください。
 プログラム行が黄色で表示され、編集できるようになります。
 
 ![screenshot7](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7.png)

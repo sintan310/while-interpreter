@@ -23,7 +23,7 @@
 python3 MainWindow.pyw
 ```
 
-ソースの実行には Python ライブラリ PySide2、 PLY(Python Lex-Yacc) が必要です。
+ソースの実行には Python ライブラリ PySide2、 PLY (Python Lex-Yacc) が必要です。
 pip コマンドでインストールしてください：
 
 ```

@@ -92,8 +92,8 @@ begin ～ end で囲まれていることが分かりやすいように
 
 ![screenshot6-2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6-2.png)
 
-デバッグモード中は、プログラムを編集できません。
-デバッグモードの終了は、「デバッグ」と書いてあるところの ```■``` ボタンを押してください。
+デバッグモード中はプログラム編集ができません。
+デバッグモードの終了は「デバッグ」と書いてあるところの ```■``` ボタンを押してください。
 デバッグモードが終了し、プログラム行が黄色で表示されて編集できるようになります。
 
 ![screenshot7](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7.png)

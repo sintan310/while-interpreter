@@ -20,7 +20,7 @@
 プログラムのソースは sources フォルダに入っています。Python3 にて MainWindow.pyw を実行してください：
 
 ```
-py MainWindow.pyw
+python3 MainWindow.pyw
 ```
 
 ソースの実行には Python ライブラリ PySide2、 PLY(Python Lex-Yacc) が必要です。

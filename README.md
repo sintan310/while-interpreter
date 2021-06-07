@@ -82,7 +82,7 @@ begin ～ end で囲まれていることが分かりやすいように
 ![screenshot5](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot5.png)
 
 デバッグモードでは、```◀◀``` ボタンと```▶▶``` ボタンで、
-実行する行を「前の行」に戻すこと、「背景が緑の行」の実行ができます。
+実行を「実行前の行」に戻すこと、「背景が緑の行」を実行することができます。
 
 ![screenshot6](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6.png)
 

@@ -32,9 +32,9 @@ pip install PySide2 ply
 
 ### Windows10 向け実行ファイル
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。
-右側の「Releases」 v1.0 のリリース（または下記リンク）から while-v1.0-release-Win10-64bit.zip を入手し、
-展開してから  while-v1.0-release-Win10-64bit.exe をダブルクリックして使ってください：
-https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0.1-release/while-v1.0-release-Win10-64bit.zip
+右側の「Releases」 v1.1 のリリース（または下記リンク）から while-v1.1-release-Win10-64bit.zip を入手し、
+展開してから  while-v1.1-release-Win10-64bit.exe をダブルクリックして使ってください：
+https://github.com/shinnya-sato/while-interpreter/releases/download/v1.1-release/while-v1.1-release-Win10-64bit.zip
 
 
 
@@ -45,33 +45,54 @@ https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0.1-relea
 - 灰色のものには実行結果が表示されます。
 
 背景が白い方にプログラム ```print(23)``` を入力し、
-画面右側にある「実行」ボタンを押してみましょう。
-
-![screen-shot2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screen_shot2.png)
-
+画面上部に見えるツールバーの ▶ボタンを押して実行してみましょう。
 実行結果のところに ```23``` と表示されます。
 
-![screen-shot3](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screen_shot3.png)
+![screenshot2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot3.png)
 
 なお、正しく入力されていないときにはエラーが表示されますので、
-訂正してもう一度「実行」ボタンを押してください。
+訂正してもう一度 ▶ボタンを押してください。
 
 複数の文を実行するときには複合文 begin ～ end を使います。
-例えば、変数 ```x0``` に ```23+10``` の結果を代入し、``x0`` の値を表示するには
+例えば、変数 ```x``` に ```23+10``` の結果を代入し、``x`` の値を表示するには
 例1のようにプログラムを入力して実行します（```33```と表示されるはずです）。
 
 例1
 ```
 begin
-  x0:=23+10;
-  print(x0);
+  x:=23+10;
+  print(x);
 end
 ```
+
+![screenshot4](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot4.png)
+
 
 行頭の半角スペースは無くても結構ですが、
 begin ～ end で囲まれていることが分かりやすいように
 インデントとして半角スペースを 2文字（程度）入れておくと良いです
 （Tabキーを使っても良いです）。
+
+右側のデバッグドッグを使うと、1行ずつ実行できます。
+まず、「デバッグ」と書いてあるところにある実行ボタン ▶を押し、
+デバッグモードにしてみましょう。
+下図のように、「次に実行される候補」の行が緑色で表示されます：
+
+![screenshot5](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot5.png)
+
+デバッグモードでは、```◀◀``` ボタンと```▶▶``` ボタンで、
+実行する行を「前の行」に戻すこと、「背景が緑の行」の実行ができます。
+
+![screenshot6](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6.png)
+
+デバッグモード中は、プログラムを編集できません。
+デバッグモードの終了は、「デバッグ」と書いてあるところの■ボタンを押してください。
+プログラム行が黄色で表示され、編集できるようになります。
+
+![screenshot7](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7.png)
+
+
+
 
 print文で複数の変数の値を表示したいときには、
 カンマ ```,``` で区切って変数名を指定してください（例2）：
@@ -80,14 +101,14 @@ print文で複数の変数の値を表示したいときには、
 例2
 ```
 begin
-  x0:=23;
-  x1:=x0+10;
-  print(x0,x1);
+  x:=23;
+  y:=x+10;
+  print(x,y);
 end
 ```
 
 
-※実行は、「実行」ボタンを押す代わりに
+※プログラムの実行は、「実行」ボタンを押す代わりに
 キーボードショートカット Ctrl+Enter でも行えます。
 
 

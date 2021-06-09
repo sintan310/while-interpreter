@@ -1,4 +1,6 @@
-from evaluator import Evaluator
+# -*- coding:utf-8 -*-
+
+from Evaluator import Evaluator
 from PySide2.QtCore import (QThread, QMutex, Signal, QMutexLocker,
                             QCoreApplication)
 
@@ -19,16 +21,17 @@ class MyThread(QThread):
         # ------------------------------------
         # public
         # ------------------------------------
-        # onestep Àsƒtƒ‰ƒO
+        # onestep å®Ÿè¡Œãƒ•ãƒ©ã‚°
         self.oneStep = False
 
-        # Àsó‘Ô—p
+        # å®Ÿè¡ŒçŠ¶æ…‹ç”¨
         self.evaluatorInfo = None
 
         
 
     def setup(self, sentences):
         if sentences == "":
+            self.evaluatorInfo = {'noerror': False}
             return 0
 
         self.stopped = True
@@ -53,15 +56,15 @@ class MyThread(QThread):
             
 
     def emit_message(self, mes):
-        # processEvents ‚ÍAƒXƒŒƒbƒh“à‚Ås‚¢AMainWindows ‚Éˆ—‚ğ“n‚·
-        # ‚±‚Ì‚æ‚¤‚É‚µ‚È‚¢‚ÆAƒoƒbƒtƒ@‚ª—­‚Ü‚Á‚Ä‚µ‚Ü‚¤HA‚ç‚µ‚¢H
+        # processEvents ã¯ã€ã‚¹ãƒ¬ãƒƒãƒ‰å†…ã§è¡Œã„ã€MainWindows ã«å‡¦ç†ã‚’æ¸¡ã™
+        # ã“ã®ã‚ˆã†ã«ã—ãªã„ã¨ã€ãƒãƒƒãƒ•ã‚¡ãŒæºœã¾ã£ã¦ã—ã¾ã†ï¼Ÿã€ã‚‰ã—ã„ï¼Ÿ
         QThread.msleep(1)
         self.message_value.emit(mes)
         QCoreApplication.processEvents()  
 
         
     def run(self):
-        # evaluation Œ‹‰Ê‚É]‚Á‚ÄAƒƒ“ƒo•Ï”‚Ì self.evaluatorInfo ‚ğ‘‚«Š·‚¦‚é
+        # evaluation çµæœã«å¾“ã£ã¦ã€ãƒ¡ãƒ³ãƒå¤‰æ•°ã® self.evaluatorInfo ã‚’æ›¸ãæ›ãˆã‚‹
         # self.evaluatorInfo = None
         
         if self.stopped:

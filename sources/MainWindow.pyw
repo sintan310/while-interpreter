@@ -3,7 +3,7 @@
 # MainWindow.pyw
 #
 # The main window for an interpreter of while programs.
-# 27 May 2021.
+# 9 June 2021.
 #
 # Copyright (c) 2021 Shinya Sato
 # Released under the MIT license
@@ -15,20 +15,27 @@ import os
 import copy
 
 from PySide2.QtCore import (Qt, QSize, 
-                            QSettings, QEvent)
-from PySide2.QtGui import QFont
+                            QSettings, QEvent, QDir, QFile, QFileInfo,
+                            QTextStream)
+from PySide2.QtGui import QFont, QIcon
 from PySide2.QtWidgets import (QWidget, QPushButton, 
                                QTextEdit, QGridLayout, QVBoxLayout, QSplitter,
                                QMainWindow, QStatusBar,
                                QAction, QFontDialog, QMessageBox,
                                QApplication, QToolBar, QToolButton,
-                               QDockWidget, QStyle, QFrame)
+                               QDockWidget, QStyle, QFrame, QFileDialog)
 
 from QCodeEditor import QCodeEditor
 from TableView import TableView
 from MyThread import MyThread
 
 CONFIG_FILE = 'config.ini'
+
+
+import PySide2
+dirname = os.path.dirname(PySide2.__file__)
+plugin_path = os.path.join(dirname, 'plugins', 'platforms')
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
 
 
 
@@ -78,11 +85,11 @@ class History:
         else:
             return False
         
-    def set_nextGeneration(self):
+    def change_generation_next(self):
         self.generation += 1
 
         
-    def set_previousGeneration(self):
+    def change_generation_previous(self):
         self.generation -= 1
         
     def init_generation(self):
@@ -177,14 +184,18 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         QMainWindow.__init__(self, parent=parent)
 
-        # Window Title
-        self.setWindowTitle('whileプログラムのインタプリタ')
-
         # Status Bar
         #self.statusBar = QStatusBar(self)
         #self.setStatusBar(self.statusBar)
         #self.statusBar.showMessage('')
 
+        tmp = QIcon.themeSearchPaths()
+        print(tmp)
+
+        # タイトル        
+        self.title = 'WHILE Program Interpreter'
+
+        
         # Menu Bar
         self.setup_MenuBar()
 
@@ -197,6 +208,8 @@ class MainWindow(QMainWindow):
         # Central Widget
         self.centralWidget = CentralWidget(parent=parent)
         self.setCentralWidget(self.centralWidget)
+        self.centralWidget.editor.document().modificationChanged.connect(self.modified_event)
+        
 
         # main 関数で focus をもらうため（すべて表示し終わった main 内で実行させる）
         self.focusWidget = self.centralWidget.editor
@@ -229,7 +242,22 @@ class MainWindow(QMainWindow):
         # Env の History
         self.history = History()
         
+
+        # ファイル名
+        self.fname = "無題"
+        self.fname_with_path = ""
         
+        self.set_window_title(self.fname_with_path)
+        
+
+    def set_window_title(self, fname):
+        # Window Title
+        self.setWindowIcon(QIcon.fromTheme("application-text"))
+        if fname != "":
+            self.setWindowTitle(fname + '[*] - ' + self.title)
+        else:
+            self.setWindowTitle('[*]' + self.title)
+            
         
     # -----------------------------------------------------------------
     # ドック関連
@@ -310,7 +338,7 @@ class MainWindow(QMainWindow):
 
     def show_Dock(self):
         self.addDock.show()
-        self.debugAct.setEnabled(False)
+        self.debug_act.setEnabled(False)
 
         
     def eventFilter(self, source, event):
@@ -332,52 +360,224 @@ class MainWindow(QMainWindow):
     def setup_MenuBar(self):
 
         # ファイルメニュー
-        self.file_menu = self.menuBar().addMenu('ファイル')
+        self.fileMenu = self.menuBar().addMenu('ファイル')
 
+        self.newFileAct = QAction('新規作成', self,
+                                         #shortcut="Ctrl+Q",
+                                         statusTip='新規作成',
+                                         triggered=self.new_file)        
+        self.newFileAct.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        self.fileMenu.addAction(self.newFileAct)
+
+        self.openFileAct = QAction('開く...', self,
+                                         #shortcut="Ctrl+Q",
+                                         statusTip='開く...',
+                                         triggered=self.open_file)
+        self.openFileAct.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+
+        self.fileMenu.addAction(self.openFileAct)
+
+        self.saveFileAct = QAction('上書き保存', self,
+                                         #shortcut="Ctrl+Q",
+                                         statusTip='上書き保存',
+                                         triggered=self.save_file)        
+        self.saveFileAct.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.saveFileAct.setEnabled(False)
+        self.fileMenu.addAction(self.saveFileAct)
+
+        self.saveasFileAct = QAction('名前をつけて保存...', self,
+                                         #shortcut="Ctrl+Q",
+                                         statusTip='名前をつけて保存...',
+                                         triggered=self.saveas_file)        
+        self.fileMenu.addAction(self.saveasFileAct)
+        
+        
+
+        self.fileMenu.addSeparator()
+        
         self.exitAct = QAction('終了する', self,
                                          #shortcut="Ctrl+Q",
                                          statusTip='終了する',
                                          triggered=self.close)        
-        self.file_menu.addAction(self.exitAct)
+        self.exitAct.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+        self.fileMenu.addAction(self.exitAct)
 
         
         # ツールメニュー
-        self.tool_menu = self.menuBar().addMenu('ツール')
+        self.toolMenu = self.menuBar().addMenu('ツール')
+
+        self.startProgramAct = QAction('プログラムの実行', self,
+                                         statusTip='プログラムの実行',
+                                         triggered=self.run_program)        
+        self.startProgramAct.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.toolMenu.addAction(self.startProgramAct)
+
+
+        self.stopProgramAct = QAction('プログラムの強制停止', self,
+                                         statusTip='プログラムの強制停止',
+                                         triggered=self.stop_program)        
+        self.stopProgramAct.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.toolMenu.addAction(self.stopProgramAct)
+        self.stopProgramAct.setEnabled(False)
+        
 
         self.selectFontAct = QAction('フォントの選択', self,
                                          statusTip='フォントの選択',
                                          triggered=self.select_font)        
-        self.tool_menu.addAction(self.selectFontAct)
+        self.toolMenu.addAction(self.selectFontAct)
         
         self.debugAct = QAction('デバッグの表示', self,
                                          statusTip='デバッグ',
                                          triggered=self.show_Dock)        
-        self.tool_menu.addAction(self.debugAct)
+        self.toolMenu.addAction(self.debugAct)
         self.debugAct.setEnabled(False)
         
         
         # ヘルプメニュー
-        self.help_menu = self.menuBar().addMenu('ヘルプ')
+        self.helpMenu = self.menuBar().addMenu('ヘルプ')
 
-        self.resetConfigAct = QAction('配置設定の初期化', self,
+        self.reset_config_act = QAction('配置設定の初期化', self,
                                       statusTip='配置設定の初期化',
-                                      triggered=self.resetConfig)
-        self.help_menu.addAction(self.resetConfigAct)
+                                      triggered=self.reset_config)
+        self.helpMenu.addAction(self.reset_config_act)
 
         
         self.aboutAct = QAction('使い方', self, statusTip='使い方',
                                 triggered=self.about)
-        self.help_menu.addAction(self.aboutAct)
+        self.helpMenu.addAction(self.aboutAct)
         
 
+
+    def maybeSave(self):
+        if not self.centralWidget.editor.document().isModified():
+            return True
+
+        #if self.fname.startswith(':/'):
+        #    return True
+
+        ret = QMessageBox.warning(self, "Message",
+                "プログラムは編集中です。\n" \
+                + "保存しますか？",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+        
+        if ret == QMessageBox.Yes:
+            if self.fname_with_path == "":
+                self.saveas_file()
+                return False
+            else:
+                self.save_file()
+                return True
+        
+        if ret == QMessageBox.Cancel:
+            return False
+        
+        return True   
+
+
+
+    def new_file(self):
+        if self.maybeSave():
+            self.centralWidget.editor.clear()
+            self.centralWidget.editor.setPlainText("")
+            
+            self.fname = ""
+            self.fname_with_path = ""
+            
+            self.centralWidget.editor.document().setModified(False)
+            
+            self.setWindowModified(False)
+            self.saveFileButton.setEnabled(False)
+            self.saveFileAct.setEnabled(False)
+            
+            self.stopDebugButton.click()
+            #self.centralWidget.editor.moveCursor(self.cursor.End)
+        
+
+    
+    def open_file(self, path=None):
+        if self.maybeSave():
+            if not path:
+                current_dir = QDir.currentPath()
+                path, _ = QFileDialog.getOpenFileName(self,
+                                                  "Open File",
+                                                  current_dir,
+                    "Text Files (*.while *.txt);;All Files (*.*)")
+
+            if path:
+                inFile = QFile(path)
+                if inFile.open(QFile.ReadWrite | QFile.Text):
+                    text = inFile.readAll()
+                    text = str(text, encoding = 'utf8')
+                    self.centralWidget.editor.setPlainText(text)
+                    
+                    self.centralWidget.editor.document().setModified(False)
+                    self.setWindowModified(False)
+                    self.saveFileButton.setEnabled(False)
+                    self.saveFileAct.setEnabled(False)
+                    
+                    self.fname_with_path = path
+                    self.fname = QFileInfo(path).fileName()                
+                    self.set_window_title(self.fname_with_path)
+
+                    
+    def save_file(self):
+        if self.fname_with_path != "":
+            file = QFile(self.fname_with_path)
+            
+            if not file.open( QFile.WriteOnly | QFile.Text):
+                QMessageBox.warning(self, "Error",
+                        "ファイル %s に書き込めませんでした:\n%s." \
+                        % (self.fname_with_path, file.errorString()))
+                return
+
+            # ファイル保存
+            outstr = QTextStream(file)
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            outstr << self.centralWidget.editor.toPlainText()
+            QApplication.restoreOverrideCursor()
+            
+            self.centralWidget.editor.document().setModified(False)
+            self.setWindowModified(False)
+            self.saveFileButton.setEnabled(False)
+            self.saveFileAct.setEnabled(False)
+            
+            self.fname = QFileInfo(self.fname).fileName() 
+            self.set_window_title(self.fname_with_path)
+
+        else:
+            self.saveas_file()
+
+
+    def saveas_file(self):
+        fname, _ = QFileDialog.getSaveFileName(self, "Save as...",
+                                            self.fname,
+                                            "WHILE program files (*.while)")
+
+        if not fname:
+            print("エラー：保存できませんでした。")
+            return False
+
+        lfname = fname.lower()
+        if not lfname.endswith('.while'):
+            fname += '.while'
+
+            
+        self.fname_with_path = fname
+        _, self.fname = os.path.split(str(fname))
+
+
+        return self.save_file()
+
+    
+        
     def about(self):
         QMessageBox.about(self, "このソフトウェアについて",
             "ソフトウェアの使い方については、同梱されている「README」などを参照してください。")
 
-    def resetConfig(self):
+    def reset_config(self):
         reply = QMessageBox.question(self, 'UI 配置の初期化', 
                                      'UI 配置情報の設定ファイルを削除しますか？',
-                                     QMessageBox.Yes, QMessageBox.No)
+                                     QMessageBox.Yes, QMessageBox.Cancel)
 
         if reply == QMessageBox.Yes:
             self.resetConfigFlag = False
@@ -393,24 +593,57 @@ class MainWindow(QMainWindow):
     # -----------------------------------------------------------------
     def setup_ToolBar(self):
         toolBar = QToolBar()
-        toolBar.setStyleSheet("QToolBar{spacing:10px; padding: 5px;}")
+        toolBar.setStyleSheet("QToolBar{spacing:10px; padding: 5px; border:0px}")
         toolBar.setObjectName("toolbar")        
         
         
         self.addToolBar(toolBar)
+        
+        # newfile
+        self.newFileButton = QToolButton()
+        self.newFileButton.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        self.newFileButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.newFileButton.clicked.connect(self.new_file)
+        toolBar.addWidget(self.newFileButton)        
 
+        
+        # openfile
+        self.openFileButton = QToolButton()
+        self.openFileButton.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.openFileButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.openFileButton.clicked.connect(self.open_file)
+        toolBar.addWidget(self.openFileButton)        
+
+        
+        # savefile
+        self.saveFileButton = QToolButton()
+        self.saveFileButton.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.saveFileButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.saveFileButton.clicked.connect(self.save_file)
+        self.saveFileButton.setEnabled(False)
+        toolBar.addWidget(self.saveFileButton)        
+        
+
+
+        toolBar2 = QToolBar()
+        toolBar2.setStyleSheet("QToolBar{spacing:10px; padding: 5px; border:0px}")
+        toolBar2.setObjectName("toolbar2")        
+        self.addToolBar(toolBar2)
+        
+        # run program
         self.startButton = QToolButton()
         self.startButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        #self.startButton.setAutoRaise(True)
         self.startButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.startButton.clicked.connect(self.run_program)
-        toolBar.addWidget(self.startButton)        
+        toolBar2.addWidget(self.startButton)        
 
+        # stop program
         self.stopButton = QToolButton()
         self.stopButton.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
         self.stopButton.clicked.connect(self.stop_program)
         self.stopButton.setEnabled(False)
-        toolBar.addWidget(self.stopButton)        
+        self.stopProgramAct.setEnabled(False)
+        toolBar2.addWidget(self.stopButton)        
 
 
         
@@ -450,6 +683,7 @@ class MainWindow(QMainWindow):
             self.onestepDebugButton.setEnabled(True)
 
             self.startButton.setEnabled(False)
+            self.startProgramAct.setEnabled(True)
             
             self.centralWidget.set_HighlightLine(first_executable_lineno)
             self.centralWidget.set_ReadOnly(True)
@@ -465,7 +699,7 @@ class MainWindow(QMainWindow):
 
         self.onestepDebugButton.setEnabled(True)
                 
-        self.history.set_previousGeneration()
+        self.history.change_generation_previous()
         
         current = self.history.get_elem()
         self.centralWidget.set_HighlightLine(current['lineno'])
@@ -491,7 +725,7 @@ class MainWindow(QMainWindow):
             self.thread.start()
 
         else:
-            self.history.set_nextGeneration()
+            self.history.change_generation_next()
             current = self.history.get_elem()
             self.tableView.set_data(current['env'])
             
@@ -565,7 +799,6 @@ class MainWindow(QMainWindow):
 
             # history に追加
             self.history.set_elem({'env':copy.deepcopy(evaluatorInfo['env']),
-            #self.history.set_elem({'env':evaluatorInfo['env'],
                                    'lineno':evaluatorInfo['lineno']})
 
 
@@ -597,6 +830,10 @@ class MainWindow(QMainWindow):
     def enable_startButton(self):
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
+
+        self.startProgramAct.setEnabled(True)
+        self.stopProgramAct.setEnabled(False)
+                
         self.centralWidget.set_ReadOnly(False)
         self.centralWidget.editor.highlightCurrentLine()
         
@@ -604,6 +841,10 @@ class MainWindow(QMainWindow):
     def disable_startButton(self):
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
+
+        self.startProgramAct.setEnabled(False)
+        self.stopProgramAct.setEnabled(True)
+        
         self.centralWidget.set_ReadOnly(True)
 
 
@@ -623,13 +864,29 @@ class MainWindow(QMainWindow):
             # 自分が処理しない場合は、オーバーライド元の処理を実行
             super().keyPressEvent(event)
 
-        
+
+    # -----------------------------------------------------------------
+    # modified が変更されたときの処理
+    # -----------------------------------------------------------------        
+    def modified_event(self, flag):
+        self.setWindowModified(flag)
+        self.saveFileButton.setEnabled(True)
+        self.saveFileAct.setEnabled(True)
+
+
+            
 
     # -----------------------------------------------------------------
     # Setting 処理
     # -----------------------------------------------------------------        
     def closeEvent(self, e):
-        self.saveSettings()
+        if self.maybeSave():
+            e.accept()
+            self.saveSettings()
+            
+        else:
+            e.ignore()
+        
 
 
     def initSettings(self):
@@ -705,7 +962,10 @@ class MainWindow(QMainWindow):
         # tableview の第1列の幅
         width = self.tableView.get_HeaddaColumnWidth()
         setting.setValue("tableview_column_width", width)
+
         
+        #program = self.centralWidget.get_program()
+        #setting.setValue("program", program)
 
         
         
@@ -713,10 +973,6 @@ class MainWindow(QMainWindow):
         self.centralWidget.editor.setFont(font)
         self.centralWidget.messageArea.setFont(font)
         self.tableView.set_font(font)
-        #self.central_widget.pushButton_start.setFont(font)
-        #self.central_widget.pushButton_stop.setFont(font)
-        #self.central_widget.pushButton_reset.setFont(font)
-        #self.central_widget.pushButton_clear.setFont(font)
 
         
 

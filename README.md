@@ -32,10 +32,10 @@ pip install PySide2 ply
 
 ### Windows10 向け実行ファイル
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。
-右側の「Releases」 v1.1 のリリースから while-v1.1-release-Win10-64bit.zip を入手し、
-展開してから  while-v1.1-release-Win10-64bit.exe をダブルクリックして使ってください。
+右側の「Releases」 v1.2 のリリースから while-v1.2-release-Win10-64bit.zip を入手し、
+展開してから  while-v1.2-release-Win10-64bit.exe をダブルクリックして使ってください。
 下記リンクからも入手できます：
-https://github.com/shinnya-sato/while-interpreter/releases/download/v1.1-release/while-v1.1-release-Win10-64bit.zip
+https://github.com/shinnya-sato/while-interpreter/releases/download/v1.2-release/while-v1.2.release-Win10-64bit.zip
 
 
 
@@ -77,9 +77,12 @@ begin ～ end で囲まれていることが分かりやすいように
 右側のデバッグドッグを使うと、1行ずつ実行できます。
 まず、「デバッグ」と書いてあるところにある実行ボタン ```▶``` を押し、
 デバッグモードにしてみましょう。
-下図のように、「次に実行される候補」の行が緑色で表示されます：
 
 ![screenshot5](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot5.png)
+
+下図のように、「次に実行される候補」の行が緑色で表示されます：
+
+![screenshot5](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot5-2.png)
 
 デバッグモードでは、```◀◀``` ボタンと```▶▶``` ボタンで、
 実行を「実行前の行」に戻すこと、「背景が緑の行」を実行することができます。
@@ -152,7 +155,7 @@ end
 ```begin s1;s2; ... ;sm; end```
 として書けます（つまり、最後の文 sm にセミコロンを付けてもエラーになりません）。
   
-- whileプログラムの文は 1行で書いてください。なお、begin ～ end の間は、改行しても1行の文として解釈されます。
+
 
 
 # プログラムのサンプル

@@ -2,7 +2,7 @@
 
   While言語のインタプリタ（GUI版）
 
-      佐藤伸也 作（2021年6月7日版）
+      佐藤伸也 作（2021年6月9日版）
       shinya.sato.mito@vc.ibaraki.ac.jp
 
 ----------------------------------------------------------------
@@ -32,14 +32,14 @@ Python3 にて MainWindow.pyw を実行してください：
 
 ソースの実行には Python ライブラリ PySide2、PLY(Python Lex-Yacc) が必要です。
 pip コマンドで前もってインストールしてください：
- pip install PySide2, ply
+ pip install pyside2 ply
 
 
 1-1-1. Windows10 向け実行ファイル
 Windows10(64bit)版向けにコンパイル済みの実行ファイル
-while-v1.0-release-Win10-64bit.exe を用意しています。
+while-v1.1.1-release-Win10-64bit.exe を用意しています。
 下記リンクから入手できます：
-https://github.com/shinnya-sato/while-interpreter/releases/download/v1.0.1-release/while-v1.0-release-Win10-64bit.exe
+https://github.com/shinnya-sato/while-interpreter/releases/download/v1.1.1-release/while-v1.0-release-Win10-64bit.exe
 
 
 ----------------------------------------------
@@ -526,6 +526,11 @@ end
 
 ----------------------------------------------
 6. 変更履歴
+
+2021-06-09
+ファイルメニューに「新規作成」などの定番操作を加え、
+ツールバーにもそれらのアイコンを加えた。
+
 
 2021-06-07
 デバッグモード用のドッグを追加し、1行ずつ実行できるようにした。

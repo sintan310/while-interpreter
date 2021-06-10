@@ -189,12 +189,8 @@ class MainWindow(QMainWindow):
         #self.setStatusBar(self.statusBar)
         #self.statusBar.showMessage('')
 
-        tmp = QIcon.themeSearchPaths()
-        print(tmp)
-
         # タイトル        
         self.title = 'WHILE Program Interpreter'
-
         
         # Menu Bar
         self.setup_MenuBar()

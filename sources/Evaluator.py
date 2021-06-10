@@ -444,16 +444,10 @@ def p_expression_array_element(t):
     '''expression : NAME array_nest
     '''
 
-    """
-    a[0][100]
-    Node("array_element_via_array", "", [Node("array_element", '', [Node('name', t[1]), t[3]]), 100])
-    """
-    first_element = t[2].pop(0)
-    ret = Node("array_element", '', [Node('name', t[1]), first_element])
-    for i in t[2]:
-        ret = Node("array_element_via_array", "", [ret, i])
-    t[0] = ret
-        
+    t[0] = Node("array_element", "",
+                [Node("name",t[1]), t[2]])
+
+    
 def p_expression_ccode_string(t):
     '''expression : CSTR
     '''
@@ -528,6 +522,7 @@ class Evaluator:
         # stacks for tasks
         self.task = Stack()
         self.value = Stack()
+        self.args = Stack()
 
         # callback for print
         global Callback, GUI_mode
@@ -596,7 +591,116 @@ class Evaluator:
                     else:
                         env[var_name] = target_value                    
                     return
+            else:
+                if cnt==2:
+                    
+                    val0 = self.value.pop()            
+                    val1 = self.value.pop()
 
+                    if aNode.leaf == "+":
+                        if type(val0) is int and type(val1) is int:
+                            self.value.push(val0+val1)
+                            return
+
+                        else:
+                            # 文字列との連結処理
+                            if type(val0) is str:
+                                val0 = val0[1:-1]
+                            else:
+                                val0 = str(val0)
+
+                            if type(val1) is str:
+                                val1 = val1[1:-1]
+                            else:
+                                val1 = str(val1)
+
+                            self.value.push('"' + str(val0) + str(val1) + '"')
+                            return
+
+                    elif aNode.leaf == "-":
+                        result = val0-val1
+                        if result < 0: result=0
+                        self.value.push(result)
+                        return
+
+                    elif aNode.leaf == "*":
+                        self.value.push(val0*val1)
+                        return
+
+                    elif aNode.leaf == "div":
+                        self.value.push(int(val0/val1))
+                        return
+                    elif aNode.leaf == "mod":
+                        self.value.push(val0%val1)
+                        return
+
+                    elif aNode.leaf == "!=":
+                        if val0 != val1:
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == "=":
+                        if val0 == val1:
+                            self.value.push(1)
+                            return 
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == ">=":
+                        if val0 >= val1:
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == ">":
+                        if val0 > val1:
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == "<=":
+                        if val0 <= val1:
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == "<":
+                        if val0 < val1:
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == "and":
+                        if (val0 ==1) and (val1 == 1):
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                    elif aNode.leaf == "or":
+                        if (val0 ==1) or (val1 == 1):
+                            self.value.push(1)
+                            return
+                        else:
+                            self.value.push(0)
+                            return
+
+                
+            return
+        
         elif aNode.type == 'remove_callparams':
             remove_target = [x for x in env.keys() if x not in aNode.children]
             
@@ -623,6 +727,7 @@ class Evaluator:
                 try:
                     retval = env[procedure_retname]
                 except:
+                    # procedure 内で retval が使われていないときは 0 を返すとする
                     retval = 0
                     
                 self.value.push(retval)
@@ -632,26 +737,29 @@ class Evaluator:
             if cnt == 1:
                 self.task.push((aNode, 2, env))
                 
-                indexes = aNode.children[1]
-                for index in indexes[::-1]:
-                    self.eval_exp(index, env) # index
-
                 exp = aNode.children[2]
                 self.eval_exp(exp, env) # expression
+                
+                indexes = aNode.children[1]
+                for index in indexes:
+                    self.task.push((Node('args'),2,env))
+                    self.eval_exp(index, env) # index
+
                     
                 return
 
             elif cnt == 2:
-                value = self.value.pop()
                 indexes = []
                 indexes_len = len(aNode.children[1])
-
+               
                 for i in range(indexes_len):
-                    val = self.value.pop()
+                    val = self.args.pop()
                     indexes += [val]
 
                 # 最後までと、最後に分離
                 (indexes, last_index) = (indexes[:-1], indexes[-1])
+
+                value = self.value.pop()
                                 
                 var_name = aNode.children[0].leaf
 
@@ -673,6 +781,43 @@ class Evaluator:
                 target[last_index] = value
                 
 
+                return
+            
+        elif aNode.type == 'array_element':
+            if cnt == 2:
+                indexes = []
+                indexes_len = len(aNode.children[1])
+               
+                for i in range(indexes_len):
+                    val = self.args.pop()
+                    indexes += [val]
+
+                # 最後までと、最後に分離
+                (indexes, last_index) = (indexes[:-1], indexes[-1])
+                                
+                var_name = aNode.children[0].leaf
+
+                # 環境に存在しないときには 0 を返す
+                if var_name not in env.keys():
+                    self.value.push(0)
+                    return
+
+                target = env[var_name]                
+                for i in indexes:
+                    if type(target) is dict and \
+                       i in target.keys() and \
+                       type(target[i]) is dict:
+                            pass
+                    else:
+                        self.value.push(0)
+                        return
+
+                    target = target[i]
+
+                try:    
+                    self.value.push(target[last_index])
+                except:
+                    self.value.push(0)                    
                 return
             
 
@@ -702,15 +847,16 @@ class Evaluator:
 
             if cnt == 1:
                 self.task.push((aNode, 2, env))
-                for anexp in aNode.children[::-1]:
+                for anexp in aNode.children:
+                    self.task.push((Node('args'),2,env))
                     self.eval_exp(anexp, env)
 
                 return
 
             elif cnt == 2:
                 result_vals = []
-                for anexp in aNode.children[::-1]:
-                    aval = self.value.pop()
+                for i in range(len(aNode.children)):
+                    aval = self.args.pop()
                     result_vals += [self.pretty_print_value(aval)]
                 
                     
@@ -774,129 +920,79 @@ class Evaluator:
             self.procedures[aNode.leaf] = aNode.children
             return
 
-    
+        elif aNode.type == 'singleop':
+            if cnt == 2:
+                val0 = self.value.pop()
+
+                if aNode.leaf == "not":
+                    if val0 ==0:
+                        self.value.push(1)
+                        return
+                    else:
+                        self.value.push(0)
+                        return
                 
+            return
+        
+        elif aNode.type == 'array':
+            if cnt == 2:
+                an_array = {}
+                for i in range(len(aNode.children)):
+                    aval = self.args.pop()
+                    an_array[i] = aval
+
+                self.value.push(an_array)
+            
+            return
+
+        elif aNode.type == 'args':
+            aval = self.value.pop()
+            self.args.push(aval)
+            return
+        
+        elif aNode.type == 'array_element':
+            if cnt==2:
+                here_index = self.value.pop()
+                name_str = aNode.children[0].leaf
+                if name_str in env:
+                    try:
+                        target_value = env[name_str][here_index]
+                    except KeyError:
+                        env[name_str][here_index] = 0
+                        target_value = 0
+
+                        print("NameError")
+                        print(env[name_str])
+                    except TypeError:
+                        env[name_str] = {}
+                        env[name_str][here_index] = 0
+                        target_value = {}
+
+                        print("TypeError")
+                        print(env[name_str])
+                else:
+                    target_value = 0
+
+                self.value.push(target_value)
+                return
+
+
+
+
+        
     def eval_exp(self, aNode, env):
 
         if aNode.type == 'binop':
-            self.eval_exp(aNode.children[0], env)
-            val0 = self.value.pop()
-            
+            self.task.push((aNode, 2, env))
             self.eval_exp(aNode.children[1], env)
-            val1 = self.value.pop()
-            
-            if aNode.leaf == "+":
-                if type(val0) is int and type(val1) is int:
-                    self.value.push(val0+val1)
-                    return
-                
-                else:
-                    if type(val0) is str:
-                        val0 = val0[1:-1]
-                    else:
-                        val0 = str(val0)
-
-                    if type(val1) is str:
-                        val1 = val1[1:-1]
-                    else:
-                        val1 = str(val1)
-
-                    self.value.push('"' + str(val0) + str(val1) + '"')
-                    return
-
-            elif aNode.leaf == "-":
-                result = val0-val1
-                if result < 0: result=0
-                self.value.push(result)
-                return
-            
-            elif aNode.leaf == "*":
-                self.value.push(val0*val1)
-                return
-            
-            elif aNode.leaf == "div":
-                self.value.push(int(val0/val1))
-                return
-            elif aNode.leaf == "mod":
-                self.value.push(val0%val1)
-                return
-            
-            elif aNode.leaf == "!=":
-                if val0 != val1:
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-                    
-            elif aNode.leaf == "=":
-                if val0 == val1:
-                    self.value.push(1)
-                    return 
-                else:
-                    self.value.push(0)
-                    return
-                
-            elif aNode.leaf == ">=":
-                if val0 >= val1:
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-                
-            elif aNode.leaf == ">":
-                if val0 > val1:
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-                
-            elif aNode.leaf == "<=":
-                if val0 <= val1:
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-                
-            elif aNode.leaf == "<":
-                if val0 < val1:
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-                
-            elif aNode.leaf == "and":
-                if (val0 ==1) and (val1 == 1):
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-                
-            elif aNode.leaf == "or":
-                if (val0 ==1) or (val1 == 1):
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
+            self.eval_exp(aNode.children[0], env)
+            return
 
         elif aNode.type == 'singleop':
+            self.task.push((aNode, 2, env))
             self.eval_exp(aNode.children[0], env)
-            val0 = self.value.pop()
+            return
             
-            if aNode.leaf == "not":
-                if val0 ==0:
-                    self.value.push(1)
-                    return
-                else:
-                    self.value.push(0)
-                    return
-
         elif aNode.type == 'number':
             self.value.push(aNode.leaf)
             return
@@ -916,56 +1012,23 @@ class Evaluator:
             return
 
         elif aNode.type == 'array':
-            an_array = {}
-            for i, anexp in enumerate(aNode.children):
+            self.task.push((aNode, 2, env))
+            for anexp in aNode.children:
+                self.task.push((Node('args'),2,env))
                 self.eval_exp(anexp, env)
-                aval = self.value.pop()
-                an_array[i] = aval
 
-            self.value.push(an_array)
             return
 
         elif aNode.type == 'array_element':
-            self.eval_exp(aNode.children[1], env)
-            here_index = self.value.pop()
+            self.task.push((aNode, 2, env))
+
+            indexes = aNode.children[1]
+            for index in indexes:
+                self.task.push((Node('args'),2,env))
+                self.eval_exp(index, env) # index
             
-            name_str = aNode.children[0].leaf
-            if name_str in env:
-                try:
-                    target_value = env[name_str][here_index]
-                except KeyError:
-                    env[name_str][here_index] = 0
-                    target_value = 0
-
-                    print("NameError")
-                    print(env[name_str])
-                except TypeError:
-                    env[name_str] = {}
-                    env[name_str][here_index] = 0
-                    target_value = {}
-                    
-                    print("TypeError")
-                    print(env[name_str])
-            else:
-                target_value = 0
-
-            self.value.push(target_value)
             return
-
-        elif aNode.type == 'array_element_via_array':
-            print("array_element_via_array");
-            self.eval_exp(aNode.children[0], env)
-            target_value1 = self.value.pop()
-            
-            self.eval_exp(aNode.children[1], env)
-            target_value2 = self.value.pop()
-            
-            if target_value2 not in target_value1:
-                target_value1[target_value2] = 0
-                
-            self.value.push(target_value1[target_value2])
-            return
-
+        
         
         elif aNode.type == 'call':
             
@@ -1011,6 +1074,7 @@ class Evaluator:
                        2,
                        procedure_env)]
 
+            # 処理をタスクに積む
             for atask in tasks[::-1]:
                 self.task.push(atask)
                 
@@ -1018,15 +1082,6 @@ class Evaluator:
             return
         
 
-
-
-            try:
-                retval = procedure_env[procedure_retname]
-            except KeyError:
-                # procedure 内で retval が使われていないときは 0 を返すとする
-                retval = 0
-
-            return retval
 
 
         
@@ -1079,6 +1134,7 @@ class Evaluator:
 
         self.task.clear()
         self.value.clear()
+        self.args.clear()
 
         
         ss = s.split('\n')
@@ -1161,15 +1217,23 @@ class Evaluator:
                 sentence_list += [sentence]
 
 
-        # print(sentence_list)
+        #print(sentence_list)
         
 
         error_num = 0
         node_list = []
         for sentence in sentence_list:
-            #sentence += "\n"
-            My_lineno += self.count_keyword(sentence, "\n")
 
+            #sentence += "\n"
+            countln = self.count_keyword(sentence, "\n")
+            My_lineno += countln
+
+            # \n だけならば処理しない
+            if countln == len(sentence):
+                continue
+
+
+            
             Error_alised = False
             aNode = parser.parse(sentence)
 

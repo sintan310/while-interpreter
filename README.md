@@ -484,7 +484,7 @@ end
 
 
 
-## whileプログラムのインタプリタ eval（再帰的定義版）
+## whileプログラムのインタプリタ eval
 
 ```
 #なお、与えるプログラムはあらかじめ構文木に変換しておく
@@ -547,7 +547,38 @@ begin
 end
 ```
 
-## ライセンス
+## バブルソート
+```
+begin
+  list := [6,9,8,4,2];
+
+  # どの要素まで処理するか
+  kokomade := 5-1;
+  
+  while kokomade>0 do begin
+
+    i:=0;
+    while i<kokomade do begin
+      # 0 から kokomade までを処理する
+    
+      if list[i] > list[i+1] then begin
+        # list[i] の方が大きいので、i+1 の要素と取り換える
+        tmp := list[i];
+        list[i] := list[i+1];
+        list[i+1] := tmp;
+      end;
+      
+      i++;
+    end;
+    
+    kokomade--;
+  end;
+
+  print(list)  # [2, 4, 6, 8, 9] になるはず
+end
+```
+
+# ライセンス
 
 このディレクトリに含まれるソースコードは
 佐藤伸也が著作権を保持し、MITライセンスのもとで配布します。

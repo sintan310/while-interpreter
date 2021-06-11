@@ -49,7 +49,6 @@ class Node:
         if aNode == None:
             aNode = self
             
-        
         if aNode.type == "name":
             return aNode.leaf
 
@@ -57,7 +56,8 @@ class Node:
             return "%d" % aNode.leaf
         
         elif aNode.type == "binop":
-            return "%s:=%s" % (self.toStr(aNode.children[0]),
+            return "%s%s%s" % (self.toStr(aNode.children[0]),
+                               aNode.leaf,
                                self.toStr(aNode.children[1]))
 
         elif aNode.type == "array_element":
@@ -195,11 +195,13 @@ lexer = lex.lex()
 # Parsing rules
 
 precedence = (
-    ('left','PLUS','MINUS'),
-    ('left','TIMES','DIVIDE', 'MOD'),
     ('nonassoc','NE','EQ', 'GE','GT','LE','LT'),
+    ('nonassoc','THEN'),
+    ('nonassoc','ELSE'),    
     ('left', 'AND','OR'),
-    ('right','UMINUS'),
+    ('left', 'PLUS','MINUS'),
+    ('left', 'TIMES','DIVIDE', 'MOD'),
+    ('right', 'UMINUS'),
 #    ('nonassoc', 'IFX','ELSE'),
     )
 
@@ -212,7 +214,7 @@ def p_statement(t):
                  | PRINT print_param
                  | WHILE expression DO
                  | WHILE expression DO statement
-                 | IF expression THEN
+                 | IF expression THEN %prec THEN
                  | IF expression THEN ELSE
                  | IF expression THEN ELSE statement
                  | IF expression THEN statement
@@ -384,7 +386,6 @@ def p_procedure_arguments(t):
         t[0] = t[1] + [t[3]]
 
 
-        
 def p_expression_binop(t):
     '''expression : expression PLUS expression
                   | expression MINUS expression
@@ -459,6 +460,8 @@ def p_expression_name(t):
     'expression : NAME'
     t[0] = Node("name", t[1], [])
 
+
+
     
 """        
 def p_multi_statement_error(t):
@@ -483,16 +486,18 @@ def p_error(t):
 
 
 import ply.yacc as yacc
-parser = yacc.yacc(write_tables=False, debug=False)
+#parser = yacc.yacc(write_tables=False, debug=False)
+parser = yacc.yacc(debug=True)
 
 # ----------------------------------------------------------------
 My_lineno = 1
 
 
 class Stack:
-    def __init__(self):
+    def __init__(self, name=""):
         self.stack = []
-
+        self.name = name
+        
     def clear(self):
         self.stack = []
 
@@ -507,10 +512,22 @@ class Stack:
             return False
     
     def push(self, elem):
+        #if self.name != "task":
+        #    print("---\npush " + self.name + "(%d)" % elem)
+            
         self.stack.append(elem)
+        
+        #if self.name != "task":
+        #    print(self.stack)
 
     def pop(self):
-        return self.stack.pop()
+        val = self.stack.pop()
+        
+        #if self.name != "task":
+        #    print(("---\npop %d from " % val) + self.name)
+        #    print(self.stack)            
+            
+        return val
         
 
 class Evaluator:
@@ -520,9 +537,9 @@ class Evaluator:
         self.procedures = {}
 
         # stacks for tasks
-        self.task = Stack()
-        self.value = Stack()
-        self.args = Stack()
+        self.task = Stack("task")
+        self.value = Stack("value")
+        self.args = Stack("args")
 
         # callback for print
         global Callback, GUI_mode
@@ -578,10 +595,11 @@ class Evaluator:
             if aNode.leaf == ":=":
                 if cnt==1:
                     self.task.push((aNode,2, env))
+                    self.task.push((Node('args'),2,env))
                     self.eval_exp(aNode.children[1], env)
                     
                 elif cnt==2:
-                    target_value = self.value.pop()
+                    target_value = self.args.pop()
                     var_name = aNode.children[0].leaf
                     
                     if type(target_value) is dict:
@@ -593,9 +611,10 @@ class Evaluator:
                     return
             else:
                 if cnt==2:
+                    #print(aNode.toStr())
                     
-                    val0 = self.value.pop()            
-                    val1 = self.value.pop()
+                    val1 = self.args.pop()            
+                    val0 = self.args.pop()
 
                     if aNode.leaf == "+":
                         if type(val0) is int and type(val1) is int:
@@ -618,6 +637,7 @@ class Evaluator:
                             return
 
                     elif aNode.leaf == "-":
+                        
                         result = val0-val1
                         if result < 0: result=0
                         self.value.push(result)
@@ -922,7 +942,7 @@ class Evaluator:
 
         elif aNode.type == 'singleop':
             if cnt == 2:
-                val0 = self.value.pop()
+                val0 = self.args.pop()
 
                 if aNode.leaf == "not":
                     if val0 ==0:
@@ -984,12 +1004,15 @@ class Evaluator:
 
         if aNode.type == 'binop':
             self.task.push((aNode, 2, env))
+            self.task.push((Node('args'),2,env))
             self.eval_exp(aNode.children[1], env)
+            self.task.push((Node('args'),2,env))
             self.eval_exp(aNode.children[0], env)
             return
 
         elif aNode.type == 'singleop':
             self.task.push((aNode, 2, env))
+            self.task.push((Node('args'),2,env))
             self.eval_exp(aNode.children[0], env)
             return
             
@@ -1265,10 +1288,12 @@ class Evaluator:
     def eval_onestep(self):
         if self.task.is_empty():
             return {'lineno':0, 'env':{}, 'empty':True}
-        
+
+        #print("---")        
         while True:
             
             (aNode1, cnt1, env1) = self.task.pop()
+
             #aNode1.print()
 
             self.eval_sentence(aNode1, cnt1, env1)
@@ -1278,7 +1303,10 @@ class Evaluator:
             # 次に実行する lineno の取得
             if not self.task.is_empty():
                 (aNode1, cnt1, env1) = self.task.pop()
-                old_lineno = self.onestep_lineno
+                
+                if self.onestep_lineno != 0:
+                    old_lineno = self.onestep_lineno
+                    
                 self.onestep_lineno = aNode1.lineno
                 self.task.push((aNode1, cnt1, env1))
                 

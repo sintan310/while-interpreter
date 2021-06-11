@@ -45,6 +45,7 @@ class QCodeEditor(QPlainTextEdit):
         self.format_onestep = QTextBlockFormat()
         self.format_onestep.setBackground(QColor(Qt.green).lighter(160))
         
+        self.setAcceptDrops(False)
 
         
     def lineNumberAreaWidth(self):

@@ -3,7 +3,7 @@
 # MainWindow.pyw
 #
 # The main window for an interpreter of while programs.
-# 9 June 2021.
+# 11 June 2021.
 #
 # Copyright (c) 2021 Shinya Sato
 # Released under the MIT license
@@ -102,7 +102,7 @@ class CentralWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setup_Ui()
-        # self.setAcceptDrops(True)
+        self.setAcceptDrops(False)
                 
         
     def setup_Ui(self):
@@ -189,6 +189,8 @@ class MainWindow(QMainWindow):
         #self.setStatusBar(self.statusBar)
         #self.statusBar.showMessage('')
 
+        self.setAcceptDrops(True)
+
         # タイトル        
         self.title = 'WHILE Program Interpreter'
         
@@ -254,7 +256,23 @@ class MainWindow(QMainWindow):
         else:
             self.setWindowTitle('[*]' + self.title)
             
-        
+
+
+    # -----------------------------------------------------------------
+    # ドラッグ%ドロップ関連
+    # -----------------------------------------------------------------
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        for url in e.mimeData().urls():
+            file_name = url.toLocalFile()
+            #print("Dropped file: " + file_name)
+            
+        self.open_file(file_name)
+
+            
     # -----------------------------------------------------------------
     # ドック関連
     # -----------------------------------------------------------------
@@ -503,7 +521,11 @@ class MainWindow(QMainWindow):
                 inFile = QFile(path)
                 if inFile.open(QFile.ReadWrite | QFile.Text):
                     text = inFile.readAll()
-                    text = str(text, encoding = 'utf8')
+                    try:
+                        text = str(text, encoding = 'utf8')
+                    except:
+                        return
+                    
                     self.centralWidget.editor.setPlainText(text)
                     
                     self.centralWidget.editor.document().setModified(False)
@@ -514,6 +536,10 @@ class MainWindow(QMainWindow):
                     self.fname_with_path = path
                     self.fname = QFileInfo(path).fileName()                
                     self.set_window_title(self.fname_with_path)
+
+                    # デバッグモードは終了しておく
+                    self.stop_debug()
+                    
 
                     
     def save_file(self):

@@ -61,8 +61,8 @@ https://github.com/shinnya-sato/while-interpreter/releases/download/v1.2.2-relea
 例1
 ```
 begin
-  x:=23+10;
-  print(x);
+    x:=23+10;
+    print(x);
 end
 ```
 
@@ -71,8 +71,8 @@ end
 
 行頭の半角スペースは無くても結構ですが、
 begin ～ end で囲まれていることが分かりやすいように
-インデントとして半角スペースを 2文字（程度）入れておくと良いです
-（Tabキーを使っても良いです）。
+インデント（字下げ）をすると良いです。Tabキーを押すと半角スペース 4文字分が
+自動的に入力できますので、インデントに便利です（Shift+Tab でインデントをキャンセルできます）。
 
 右側のデバッグドッグを使うと、1行ずつ実行できます。
 まず、「デバッグ」と書いてあるところにある実行ボタン ```▶``` を押し、
@@ -101,6 +101,8 @@ begin ～ end で囲まれていることが分かりやすいように
 
 ![screenshot7](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7.png)
 
+![screenshot7-2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7-2.png)
+
 
 
 
@@ -111,9 +113,9 @@ print文で複数の変数の値を表示したいときには、
 例2
 ```
 begin
-  x:=23;
-  y:=x+10;
-  print(x,y);
+    x:=23;
+    y:=x+10;
+    print(x,y);
 end
 ```
 

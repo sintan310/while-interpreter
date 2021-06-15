@@ -1,19 +1,113 @@
 # -*- coding: utf-8 -*-
 #
-# QcodeEditor.py by acbetter.
+# QcodeEditor.py
+# It is based on the following codes by acbetter:
 # https://stackoverflow.com/questions/40386194/create-text-area-textedit-with-line-number-in-pyqt
 #
-# Editted by Shinya Sato (3 June 2021)
-# - to fit it in PySide2
-# - to fix the lineNumberAreaWidth
-# - to add another highlightLine for one-step execution
-#   in hightlightLine and highlightCurrentLine functions
+# Others are written by Shinya Sato (15 June 2021)
 
 
-from PySide2.QtCore import Qt, QRect, QSize
+from PySide2.QtCore import Qt, QRect, QSize, QRegExp, QPoint
 from PySide2.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 from PySide2.QtGui import (QColor, QPainter, QTextFormat, QTextBlockFormat,
-                           QFont, QTextCursor)
+                           QFont, QTextCursor,
+                           QSyntaxHighlighter, QTextCharFormat)
+
+
+class MyHighlighter(QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        keywordFormat = QTextCharFormat()
+        # keywordFormat.setFontWeight(QFont.Bold)
+        
+        keywordFormat.setForeground(QColor(Qt.darkMagenta).lighter(130))
+        #keywordPatterns = ["\\bMy[A-Za-z]+\\b"]
+        # '\\b' means word boundary
+        keywordPatterns = ['\\bprint\\b',
+                           '\\bbegin\\b',
+                           '\\bend\\b',
+                           '\\bwhile\\b',
+                           '\\bdo\\b',
+                           '\\bdiv\\b',
+                           '\\bmod\\b',
+                           '\\band\\b',
+                           '\\bor\\b',
+                           '\\bnot\\b',
+                           '\\bif\\b',
+                           '\\bthen\\b',
+                           '\\belse\\b',
+        ]
+
+        self.highlightingRules = [(QRegExp(pattern), keywordFormat)
+                                  for pattern in keywordPatterns]
+
+
+        builtinFormat = QTextCharFormat()
+        builtinFormat.setForeground(QColor(Qt.darkYellow).lighter(90))
+        patterns = [
+                    '\\bprint\\b',
+
+                    '\\blen\\b',
+                    '\\bleft\\b',
+                    '\\bright\\b',
+                    '\\bmid\\b',
+                    ]
+        for rule in [(QRegExp(pattern), builtinFormat)
+                                  for pattern in patterns]:
+            self.highlightingRules.append(rule)
+
+
+        pattern = "\\b[0-9]+"
+        digitFormat = QTextCharFormat()
+        digitFormat.setForeground(QColor(Qt.darkGreen))
+        self.highlightingRules.append((QRegExp(pattern),
+                digitFormat))
+                
+        functionFormat = QTextCharFormat()
+        functionFormat.setForeground(QColor(Qt.darkYellow).lighter(90))
+        # (?=E) means positive match. foo(a,b): matches,
+        # but only foo is selected
+        pattern = "\\b[A-Za-z0-9_]+(?=(\\(.*\\):))"
+        self.highlightingRules.append((QRegExp(pattern),
+                functionFormat))
+
+        patterns = ['\\bprocedure\\b',
+                    '\\bdiv\\b',
+                    '\\bmod\\b',
+                    '\\band\\b',
+                    '\\bor\\b',
+                    '\\bnot\\b',
+                    ]
+        operatorFormat = QTextCharFormat()
+        operatorFormat.setForeground(QColor(Qt.blue))
+        for pat in patterns:
+            self.highlightingRules.append((QRegExp(pat),
+                                           operatorFormat))
+
+            
+        quotationFormat = QTextCharFormat()
+        quotationFormat.setForeground(QColor(Qt.darkRed).lighter(120))
+        self.highlightingRules.append((QRegExp("\"([^\"]*)\""),
+                                       quotationFormat))        
+
+            
+        lineCommentFormat = QTextCharFormat()
+        lineCommentFormat.setForeground(QColor(Qt.darkGreen).lighter(100))
+        self.highlightingRules.append((QRegExp("#[^\n]*"),
+                                       lineCommentFormat))
+
+        
+        
+    def highlightBlock(self, text):
+        for pattern, format in self.highlightingRules:
+            expression = QRegExp(pattern)
+            index = expression.indexIn(text)
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+
 
 
 class QLineNumberArea(QWidget):
@@ -32,21 +126,300 @@ class QCodeEditor(QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.lineNumberArea = QLineNumberArea(self)
+        
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
         self.updateRequest.connect(self.updateLineNumberArea)
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
+        
         self.updateLineNumberAreaWidth(0)
         
         self.hlineno = 0
+        self.tabStop = 4
 
-        self.format_normal = QTextBlockFormat()
-        self.format_normal.setBackground(Qt.white)
-
-        self.format_onestep = QTextBlockFormat()
-        self.format_onestep.setBackground(QColor(Qt.green).lighter(160))
-        
         self.setAcceptDrops(False)
 
+        self.highligher = MyHighlighter(self.document())
+
+        self.bracket_list = {
+            '(' : ')',
+            '[' : ']',
+            '"' : '"',
+        }
+        
+
+    # paste のイベント
+    def insertFromMimeData(self, source):
+        if source.hasText():
+            text = source.text()
+            self.insert_as_codes(text)
+
+
+
+            
+    def get_tabspace_size(self, pos):
+        return self.tabStop - (pos % self.tabStop)
+            
+    def insert_as_codes(self, text):
+        cursor = self.textCursor()
+
+        replaced_text = ""
+        pos = cursor.positionInBlock()
+        for x in list(text):
+            if x == '\t':
+                space_size = self.get_tabspace_size(pos)
+                replaced_text += ' ' * space_size
+
+                pos += self.tabStop
+
+            elif x == '\n':
+                replaced_text += '\n'
+                pos = 0
+            else:
+                replaced_text += x
+                pos+=1
+
+        cursor.insertText(replaced_text)
+        
+
+    def indent_tab(self, cursor):
+        # カーソルがスペース上ならば、右側のワード前まで移動
+        block_text = cursor.block().text()
+        pos = cursor.positionInBlock()
+        try:
+            if block_text[pos] == " ":
+                cursor.movePosition(QTextCursor.NextWord)
+        except:
+            pass
+
+        tabsize = self.get_tabspace_size(cursor.positionInBlock())
+        cursor.insertText(' ' * tabsize)
+        
+        
+    def indent_shifttab(self, cursor):
+        # 1行選択
+        cursor.movePosition(QTextCursor.StartOfLine)
+        cursor.movePosition(QTextCursor.NextWord,
+                            QTextCursor.KeepAnchor)
+
+        selected_text = cursor.selectedText()
+        cursor.clearSelection()
+
+        if selected_text.startswith(' '):
+            # shifttab 操作可
+            
+            block_text = cursor.block().text()
+            pos = cursor.positionInBlock()
+            try:
+                if block_text[pos] == " ":
+                    cursor.movePosition(QTextCursor.NextWord)
+            except:
+                pass
+                    
+            tabsize = self.get_tabspace_size(cursor.positionInBlock())
+
+            delete_size = self.tabStop - tabsize
+            if pos > 0 and delete_size == 0:
+                delete_size = self.tabStop
+
+            for i in range(delete_size):
+                cursor.deletePreviousChar()
+                        
+        
+            
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Backtab:
+            cursor = self.textCursor()
+
+            if not cursor.hasSelection():
+            
+                cursor.clearSelection()
+
+                self.indent_shifttab(cursor)
+                
+                    
+            else:
+                # selection があるとき
+                epos = cursor.anchor()
+                spos = cursor.position()
+                if epos < spos:
+                    epos, spos = spos, epos
+                    
+                cursor.clearSelection()
+                cursor.setPosition(spos)
+                cursor.setPosition(epos, QTextCursor.KeepAnchor)
+                selected_text = cursor.selectedText().replace(u'\u2029', '\n')
+                cursor.clearSelection()
+
+                countln = selected_text.count('\n')
+                #print(countln)
+                
+                cursor.setPosition(spos)
+                for i in range(countln+1):
+                    self.indent_shifttab(cursor)
+                    cursor.movePosition(QTextCursor.NextBlock)
+
+                
+                
+
+        elif event.key() == Qt.Key_Return:
+
+            if event.modifiers() & Qt.ControlModifier:
+                super().keyPressEvent(event)
+                return
+
+                        
+            cursor = self.textCursor()
+            
+            cursor.clearSelection()
+
+            # 行頭から現在場所までを選択
+            start_pos = cursor.position()
+            cursor.movePosition(QTextCursor.StartOfBlock,
+                                    QTextCursor.KeepAnchor)
+            selected_left_text = cursor.selectedText()
+            cursor.clearSelection()
+
+            indent_chars = ""            
+            for char in list(selected_left_text):
+                if char == "":
+                    break
+
+                if char != " ":
+                    break
+
+                indent_chars += char
+
+                
+
+            if not selected_left_text.endswith("begin"):
+                # begin 以外では、行の先頭のインデントを受け継いで終わり
+                cursor.setPosition(start_pos)
+                cursor.insertBlock()
+                cursor.insertText(indent_chars)
+                return
+                
+
+
+            # 同レベルの end までを取得
+            cursor.setPosition(start_pos)
+            cursor.movePosition(QTextCursor.End,
+                                    QTextCursor.KeepAnchor)
+            selected_text = cursor.selectedText().replace(u'\u2029', '\n')
+
+            if selected_left_text.startswith("procedure"):
+                # procedure 行の begin は、indent 0 として探す
+                pattern = "\\nend\\b"
+                indent_depth = 0
+            else:
+                pattern = indent_chars + "end\\b"
+                indent_depth = len(indent_chars)
+                
+                
+            rx = QRegExp(pattern)
+            pos = rx.indexIn(selected_text, 0)
+
+            if pos == -1:
+                # 同レベルが出現しないなら、ペア end が必要
+                end_required = True
+                
+            else:
+                # 同レベルが出現するので、ペア end はいらない。
+                # ただし、そこまでに begin が同レベル以下で出現していれば
+                # ペアの end は必要。
+                rx1 = QRegExp('\\b(begin|procedure)\\b')
+                rx2 = QRegExp('(\\b(if|while|else)\\b).*\\bbegin\\b')
+                #rx2 = QRegExp('\\bprocedure\\b')
+
+                end_required = False
+                
+                selected_text = selected_text[:pos]
+                for line in selected_text.split('\n'):
+                    pos = rx1.indexIn(line, 0)
+                    #print("line:[%s] pos=%d" % (line, pos))
+                    if pos != -1 and pos <= indent_depth:
+                        end_required = True
+                        break
+                    
+                    pos = rx2.indexIn(line, 0)
+                    #print("line:[%s] pos=%d" % (line, pos))
+                    if pos != -1 and pos <= indent_depth:
+                        end_required = True
+                        break
+                    
+
+                    
+            if not end_required:
+                # 不要なら、単なるインデント
+                cursor.setPosition(start_pos)
+                cursor.insertBlock()
+                cursor.insertText(indent_chars + ' ' * self.tabStop)
+                return
+                                
+
+            # ペア end を挿入
+            cursor.setPosition(start_pos)
+            cursor.movePosition(QTextCursor.EndOfBlock,
+                                    QTextCursor.KeepAnchor)
+            selected_right_text = cursor.selectedText()
+            
+            #cursor.clearSelection() せずに、選択領域を上書き
+            text = '\n'
+            text+= selected_right_text + '\n'
+            text+= indent_chars + "end"
+            cursor.insertText(text)
+
+            cursor.setPosition(start_pos)
+            cursor.movePosition(QTextCursor.NextBlock)
+            self.setTextCursor(cursor)            
+            cursor.insertText(indent_chars + ' ' * self.tabStop)
+                            
+            return
+            
+            
+
+        elif event.key() == Qt.Key_Tab:
+            cursor = self.textCursor()
+            if cursor.hasSelection():
+                epos = cursor.anchor()
+                spos = cursor.position()
+                if epos < spos:
+                    epos, spos = spos, epos
+
+                    
+                cursor.clearSelection()
+                cursor.setPosition(spos)
+                cursor.setPosition(epos, QTextCursor.KeepAnchor)
+                selected_text = cursor.selectedText().replace(u'\u2029', '\n')
+                cursor.clearSelection()
+
+                countln = selected_text.count('\n')
+                
+                cursor.setPosition(spos)
+
+                for i in range(countln+1):
+                    cursor.movePosition(QTextCursor.StartOfLine)
+                    self.indent_tab(cursor)                    
+                    cursor.movePosition(QTextCursor.NextBlock)
+
+                    
+                    
+            else:
+                self.indent_tab(cursor)
+                #super().keyPressEvent(event)
+
+                
+        else:
+            closing_char = self.bracket_list.get(event.text())
+            if closing_char:
+                char_cursor = self.textCursor()
+                char_position = char_cursor.position()
+
+                self.insertPlainText(closing_char)
+                char_cursor.setPosition(char_position)
+                self.setTextCursor(char_cursor)
+            
+            super().keyPressEvent(event)
+        
         
     def lineNumberAreaWidth(self):
         """
@@ -59,6 +432,7 @@ class QCodeEditor(QPlainTextEdit):
         """
         space = 3 + self.fontMetrics().width('9') * 3
         return space
+    
 
     def updateLineNumberAreaWidth(self, _):
         self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
@@ -77,6 +451,7 @@ class QCodeEditor(QPlainTextEdit):
         self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
 
 
+
     def clearHighlightLine(self):
         #cursor = self.textCursor()
         #cursor.movePosition(QTextCursor.Start)
@@ -91,6 +466,7 @@ class QCodeEditor(QPlainTextEdit):
             
         self.highlightLine()
         self.highlightCurrentLine()
+
         
         
     def setHighlightLineno(self, lineno):            
@@ -98,34 +474,35 @@ class QCodeEditor(QPlainTextEdit):
         self.highlightLine()
         
 
+        
+            
     def highlightLine(self):
 
-        # 全画面を選択しておき、白の背景色にする
-        cursor = self.textCursor()
-        cursor.select(QTextCursor.Document)
-        cursor.setBlockFormat(self.format_normal)
-        
-        # current cursor を移動させて、画面を自動的にスクロールさせる
         if self.hlineno > 0:
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.Start)
-            cursor.movePosition(QTextCursor.NextBlock,
-                                QTextCursor.MoveAnchor,
-                                self.hlineno - 1)
-            self.setTextCursor(cursor)
+            selection = QTextEdit.ExtraSelection()
+            lineColor = QColor(Qt.green).lighter(160)
+            selection.format.setBackground(lineColor)
+            selection.format.setProperty(QTextFormat.FullWidthSelection,
+                                         True)
+            selection.cursor = self.textCursor()
+
+            selection.cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
+            self.setTextCursor(selection.cursor)
+            selection.cursor.clearSelection()
+
+            self.setExtraSelections([selection])
+
+            return
+            
 
 
-            # hlineno をハイライト表示
-            cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
-            cursor.setBlockFormat(self.format_onestep)
-                             
-        return
+
         
-
         
     def highlightCurrentLine(self):
         extraSelections = []
 
+        
         if self.hlineno > 0:
             pass
             
@@ -148,6 +525,7 @@ class QCodeEditor(QPlainTextEdit):
             
 
     def lineNumberAreaPaintEvent(self, event):
+
         painter = QPainter(self.lineNumberArea)
 
         painter.fillRect(event.rect(), Qt.lightGray)

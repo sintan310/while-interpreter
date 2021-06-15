@@ -8,7 +8,7 @@ from PySide2.QtCore import (QThread, QMutex, Signal, QMutexLocker,
 class MyThread(QThread):
     # Create signals 
     stopped_value = Signal(bool)
-    message_value = Signal(str)
+    message_value = Signal((str,bool))
 
     
     def __init__(self, parent=None, callback=None):
@@ -16,7 +16,7 @@ class MyThread(QThread):
         self.stopped = False
         self.mutex = QMutex()
         self.evaluator = Evaluator(GUI=True,
-                                   callback=self.emit_message)
+                                   callback=lambda x,y:self.emit_message(x,y))
         
         # ------------------------------------
         # public
@@ -55,11 +55,11 @@ class MyThread(QThread):
             self.stopped = False
             
 
-    def emit_message(self, mes):
+    def emit_message(self, mes, error=False):
         # processEvents は、スレッド内で行い、MainWindows に処理を渡す
         # このようにしないと、バッファが溜まってしまう？、らしい？
         QThread.msleep(1)
-        self.message_value.emit(mes)
+        self.message_value.emit(mes, error)
         QCoreApplication.processEvents()  
 
         

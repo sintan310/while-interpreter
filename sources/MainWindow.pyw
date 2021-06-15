@@ -3,11 +3,11 @@
 # MainWindow.pyw
 #
 # The main window for an interpreter of while programs.
-# 11 June 2021.
+# 16 June 2021.
 #
 # Copyright (c) 2021 Shinya Sato
 # Released under the MIT license
-# https://opensource.org/licenses/mit-license.php#
+# https://opensource.org/licenses/mit-license.php
 # -----------------------------------------------------------------------------
 
 import sys
@@ -17,7 +17,7 @@ import copy
 from PySide2.QtCore import (Qt, QSize, 
                             QSettings, QEvent, QDir, QFile, QFileInfo,
                             QTextStream)
-from PySide2.QtGui import QFont, QIcon
+from PySide2.QtGui import QFont, QIcon, QColor
 from PySide2.QtWidgets import (QWidget, QPushButton, 
                                QTextEdit, QGridLayout, QVBoxLayout, QSplitter,
                                QMainWindow, QStatusBar,
@@ -45,7 +45,6 @@ class History:
         self.generation = 0
         self.history = []
 
-        
 
     def set_firstGeneration(self, elem):
         self.generation = 1
@@ -124,9 +123,6 @@ class CentralWidget(QWidget):
 
         rowHeight = self.fontMetrics().lineSpacing()
         self.messageArea.setMinimumHeight(rowHeight * 1)
-
-
-        
         
         # メイン画面に部品を配置する
         layout = QGridLayout()
@@ -150,9 +146,17 @@ class CentralWidget(QWidget):
         
        
     # public methods
-    def add_messages(self, mes):
+    def add_messages(self, mes, error=False):
         cursor = self.messageArea.textCursor()
-        cursor.insertText(mes + "\n")
+
+        escaped = mes.replace("&","&amp;").replace(">","&gt;").replace("<","&lt;")
+        
+        if error:
+            cursor.insertHtml('<font color="#cc3333">%s</font>' % escaped)
+        else:
+            cursor.insertHtml('<font color="black">%s</font>' % escaped)
+
+        cursor.insertText("\n")
 
 
     def clear_messages(self):
@@ -167,15 +171,17 @@ class CentralWidget(QWidget):
         self.editor.setHighlightLineno(lineno)
         self.editor.highlightLine()
         
+        
     def clear_HighlightLine(self):
         self.editor.clearHighlightLine()
 
     def set_ReadOnly(self, flag):
         self.editor.setReadOnly(flag)
-        if flag:
-            self.editor.setExtraSelections([])
+        #if flag:
+        #    self.editor.setExtraSelections([])
             
-
+    def set_tabStop(self, tabStop):
+        self.editor.tabStop = tabStop
 
     
 
@@ -191,8 +197,14 @@ class MainWindow(QMainWindow):
 
         self.setAcceptDrops(True)
 
+        # ファイル名
+        self.fname = "無題"
+        self.fname_with_path = ""
+        
         # タイトル        
         self.title = 'WHILE Program Interpreter'
+        self.set_window_title(self.fname_with_path)
+
         
         # Menu Bar
         self.setup_MenuBar()
@@ -227,25 +239,21 @@ class MainWindow(QMainWindow):
         self.thread.message_value.connect(self.centralWidget.add_messages)
 
         
+        # タブスペース
+        self.tabStop = 4
+        self.centralWidget.set_tabStop(self.tabStop)
+        
+        
         # Settings 処理
         self.loadSettings()
 
-
-        # public ---------------------------
-        # メンバ変数
 
         # 閉じるときに設定を保存する
         self.resetConfigFlag = True
 
         # Env の History
         self.history = History()
-        
 
-        # ファイル名
-        self.fname = "無題"
-        self.fname_with_path = ""
-        
-        self.set_window_title(self.fname_with_path)
         
 
     def set_window_title(self, fname):
@@ -257,6 +265,9 @@ class MainWindow(QMainWindow):
             self.setWindowTitle('[*]' + self.title)
             
 
+            
+
+            
 
     # -----------------------------------------------------------------
     # ドラッグ%ドロップ関連
@@ -288,7 +299,7 @@ class MainWindow(QMainWindow):
         
         self.startDebugButton = QPushButton()
         self.startDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.startDebugButton.clicked.connect(self.set_program)
+        self.startDebugButton.clicked.connect(self.prepare_debug_mode)
         self.startDebugButton.setCheckable(False)  
         
         self.stopDebugButton = QPushButton()
@@ -350,17 +361,23 @@ class MainWindow(QMainWindow):
         self.addDock.installEventFilter(self)        
 
 
+
     def show_Dock(self):
-        self.addDock.show()
-        self.debug_act.setEnabled(False)
+        if self.debugDockAct.isChecked():
+            self.addDock.show()
+        else:
+            self.addDock.hide()
 
         
     def eventFilter(self, source, event):
         if (event.type() == QEvent.Close and \
             isinstance(source, QDockWidget)):
+            # ドッグが閉じた時の処理
+            
             #print(source.windowTitle())
             #print(source.objectName())
-            self.debugAct.setEnabled(True)
+
+            self.debugDockAct.setChecked(False)
             
             
         return super().eventFilter(source, event)
@@ -434,26 +451,36 @@ class MainWindow(QMainWindow):
         self.toolMenu.addAction(self.stopProgramAct)
         self.stopProgramAct.setEnabled(False)
         
+        self.toolMenu.addSeparator()
 
+        
         self.selectFontAct = QAction('フォントの選択', self,
                                          statusTip='フォントの選択',
                                          triggered=self.select_font)        
         self.toolMenu.addAction(self.selectFontAct)
         
-        self.debugAct = QAction('デバッグの表示', self,
-                                         statusTip='デバッグ',
-                                         triggered=self.show_Dock)        
-        self.toolMenu.addAction(self.debugAct)
-        self.debugAct.setEnabled(False)
         
+        self.reset_config_act = QAction('配置設定の初期化', self,
+                                      statusTip='配置設定の初期化',
+                                      triggered=self.reset_config)
+        self.toolMenu.addAction(self.reset_config_act)
+
+        self.toolMenu.addSeparator()
+
+        self.debugDockAct = QAction('デバッグ表示', self,
+                                         statusTip='デバッグ表示',
+                                         triggered=self.show_Dock)        
+        self.toolMenu.addAction(self.debugDockAct)
+        
+        self.debugDockAct.setObjectName("debugDock_enabled")        
+        self.debugDockAct.setCheckable(True)
+        self.debugDockAct.setChecked(True)
+        
+
         
         # ヘルプメニュー
         self.helpMenu = self.menuBar().addMenu('ヘルプ')
 
-        self.reset_config_act = QAction('配置設定の初期化', self,
-                                      statusTip='配置設定の初期化',
-                                      triggered=self.reset_config)
-        self.helpMenu.addAction(self.reset_config_act)
 
         
         self.aboutAct = QAction('使い方', self, statusTip='使い方',
@@ -496,7 +523,8 @@ class MainWindow(QMainWindow):
             
             self.fname = ""
             self.fname_with_path = ""
-            
+            self.set_window_title(self.fname_with_path)
+
             self.centralWidget.editor.document().setModified(False)
             
             self.setWindowModified(False)
@@ -506,6 +534,9 @@ class MainWindow(QMainWindow):
             self.stopDebugButton.click()
             #self.centralWidget.editor.moveCursor(self.cursor.End)
         
+            # デバッグの tableView と実行結果をクリア
+            self.tableView.set_data({})
+            self.centralWidget.clear_messages()
 
     
     def open_file(self, path=None):
@@ -521,17 +552,20 @@ class MainWindow(QMainWindow):
                 inFile = QFile(path)
                 if inFile.open(QFile.ReadWrite | QFile.Text):
                     text = inFile.readAll()
+                    
                     try:
                         text = str(text, encoding = 'utf8')
-                    except:
+                        
+                    except Exception as e:
+                        QMessageBox.critical(self, "Error",
+                                             "開けませんでした。\n" + str(e))
+                        
                         return
                     
-                    self.centralWidget.editor.setPlainText(text)
-                    
-                    self.centralWidget.editor.document().setModified(False)
-                    self.setWindowModified(False)
-                    self.saveFileButton.setEnabled(False)
-                    self.saveFileAct.setEnabled(False)
+                    # エディタにプログラムソースをセットする
+                    #self.centralWidget.editor.setPlainText(text)
+                    self.centralWidget.editor.setPlainText("")
+                    self.centralWidget.editor.insert_as_codes(text)
                     
                     self.fname_with_path = path
                     self.fname = QFileInfo(path).fileName()                
@@ -539,8 +573,17 @@ class MainWindow(QMainWindow):
 
                     # デバッグモードは終了しておく
                     self.stop_debug()
-                    
 
+                    # デバッグの tableView と実行結果をクリア
+                    self.tableView.set_data({})
+                    self.centralWidget.clear_messages()
+                    
+                    # 変更あり情報（modified）をクリア
+                    self.centralWidget.editor.document().setModified(False)
+                    self.setWindowModified(False)
+                    self.saveFileButton.setEnabled(False)
+                    self.saveFileAct.setEnabled(False)
+                    
                     
     def save_file(self):
         if self.fname_with_path != "":
@@ -554,8 +597,10 @@ class MainWindow(QMainWindow):
 
             # ファイル保存
             outstr = QTextStream(file)
+            outstr.setCodec("UTF-8")
+            
             QApplication.setOverrideCursor(Qt.WaitCursor)
-            outstr << self.centralWidget.editor.toPlainText()
+            outstr << self.centralWidget.editor.toPlainText().replace(u'\u301c', u'\uff5e')
             QApplication.restoreOverrideCursor()
             
             self.centralWidget.editor.document().setModified(False)
@@ -692,7 +737,7 @@ class MainWindow(QMainWindow):
             
         
         
-    def set_program(self):
+    def prepare_debug_mode(self):        
         textboxValue = self.centralWidget.get_program()        
         first_executable_lineno = self.thread.setup(textboxValue)
         
@@ -798,7 +843,7 @@ class MainWindow(QMainWindow):
         self.thread.terminate()
         self.thread.wait()
         self.thread.stop()
-        self.centralWidget.add_messages("強制終了されました");
+        self.centralWidget.add_messages("強制終了されました", error=True);
                 
 
 
@@ -881,10 +926,23 @@ class MainWindow(QMainWindow):
         if event.modifiers() & Qt.ControlModifier and \
            event.key() == Qt.Key_Return:
             self.startButton.click()
-                        
-        else:
-            # 自分が処理しない場合は、オーバーライド元の処理を実行
-            super().keyPressEvent(event)
+            return
+
+        elif not self.startDebugButton.isEnabled():
+            # デバッグ中なら
+            if event.key() in [Qt.Key_Right, Qt.Key_Down]:
+                self.onestepDebugButton.click()
+                return
+            elif event.key() in [Qt.Key_Left, Qt.Key_Up]:
+                self.rewindDebugButton.click()
+                return
+            elif event.key() == Qt.Key_Escape:
+                self.stopDebugButton.click()
+                return
+
+            
+        # 自分が処理しない場合は、オーバーライド元の処理を実行
+        super().keyPressEvent(event)
 
 
     # -----------------------------------------------------------------
@@ -953,6 +1011,15 @@ class MainWindow(QMainWindow):
         # tableview の第1列の幅
         width = setting.value("tableview_column_width")
         self.tableView.set_HeaddaColumnWidth(int(width))
+
+        # メニュー->ツール->デバッグ表示 のチェック
+        checked = setting.value(self.debugDockAct.objectName())
+        if checked == "true":
+            checked = True
+        else:
+            checked = False
+        self.debugDockAct.setChecked(checked)
+        self.show_Dock()
         
                 
     def saveSettings(self):
@@ -985,6 +1052,9 @@ class MainWindow(QMainWindow):
         width = self.tableView.get_HeaddaColumnWidth()
         setting.setValue("tableview_column_width", width)
 
+        # メニュー->ツール->デバッグ表示 のチェック
+        setting.setValue(self.debugDockAct.objectName(),
+                         self.debugDockAct.isChecked())
         
         #program = self.centralWidget.get_program()
         #setting.setValue("program", program)
@@ -996,6 +1066,7 @@ class MainWindow(QMainWindow):
         self.centralWidget.messageArea.setFont(font)
         self.tableView.set_font(font)
 
+        # self.centralWidget.editor.setTabStopWidth(self.centralWidget.editor.fontMetrics().horizontalAdvance(" ") * self.tabStop)
         
 
     def select_font(self):

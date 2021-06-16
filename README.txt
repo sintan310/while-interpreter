@@ -54,7 +54,7 @@ pip コマンドで前もってインストールしてください：
 Windows10(64bit)版向けにコンパイル済みの実行ファイル
 while-v1.3.2-release-Win10-64bit.zip を用意しています。
 下記リンクから入手できます：
-https://github.com/shinnya-sato/while-interpreter/releases/download/v1.3.2-release/while-v1.3.2-release-Win10-64bit.zip
+https://github.com/shintan310/while-interpreter/releases/download/v1.3.2-release/while-v1.3.2-release-Win10-64bit.zip
 
 
 
@@ -812,7 +812,7 @@ end
 2021-06-16
 - v1.3.2 としてリリース
 - 負の値を文法エラーにした。
-- () や [] のオートコンプリートが行末だけで有効にした。
+- () や [] のオートコンプリートを行末だけで有効にした。
 
 
 2021-06-15

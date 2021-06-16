@@ -211,7 +211,7 @@ precedence = (
     ('left', 'AND','OR'),
     ('left', 'PLUS','MINUS'),
     ('left', 'TIMES','DIVIDE', 'MOD'),
-    ('right', 'UMINUS'),
+#    ('right', 'UMINUS'),
 #    ('nonassoc', 'IFX','ELSE'),
     )
 
@@ -442,10 +442,10 @@ def p_expression_call(t):
     t[0] = Node("call", t[1], t[2], lineno=t.lineno(1))
 
     
-def p_expression_uminus(t):
-    'expression : MINUS expression %prec UMINUS'
-    #t[0] = -t[2]
-    t[0] = Node("singleop", "-", [t[1]], lineno=t.lineno(1))
+#def p_expression_uminus(t):
+#    'expression : MINUS expression %prec UMINUS'
+#    #t[0] = -t[2]
+#    t[0] = Node("singleop", "-", [t[1]], lineno=t.lineno(1))
 
     
 def p_expression_not(t):

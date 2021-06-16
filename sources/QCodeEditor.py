@@ -414,10 +414,15 @@ class QCodeEditor(QPlainTextEdit):
                 char_cursor = self.textCursor()
                 char_position = char_cursor.position()
 
-                self.insertPlainText(closing_char)
-                char_cursor.setPosition(char_position)
-                self.setTextCursor(char_cursor)
-            
+                char_cursor.movePosition(QTextCursor.EndOfBlock,
+                                         QTextCursor.KeepAnchor)
+                selected_text = char_cursor.selectedText()
+                if selected_text == "":
+                    self.insertPlainText(closing_char)
+                    char_cursor.setPosition(char_position)
+                    self.setTextCursor(char_cursor)
+
+                    
             super().keyPressEvent(event)
         
         

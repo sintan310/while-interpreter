@@ -414,6 +414,7 @@ class QCodeEditor(QPlainTextEdit):
                 char_cursor = self.textCursor()
                 char_position = char_cursor.position()
 
+                # 行末での入力ならばオートコンプリートさせる
                 char_cursor.movePosition(QTextCursor.EndOfBlock,
                                          QTextCursor.KeepAnchor)
                 selected_text = char_cursor.selectedText()

@@ -7,12 +7,82 @@
 # Others are written by Shinya Sato (15 June 2021)
 
 
-from PySide2.QtCore import Qt, QRect, QSize, QRegExp, QPoint
+from PySide2.QtCore import Qt, QRect, QSize, QRegExp, QPoint, QTimer
 from PySide2.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 from PySide2.QtGui import (QColor, QPainter, QTextFormat, QTextBlockFormat,
                            QFont, QTextCursor,
                            QSyntaxHighlighter, QTextCharFormat)
 
+import math
+
+class MyLineTracer:
+    def __init__(self, lineno=1, animation=True):
+                
+        self.animation = animation
+        
+        self.lineno = lineno
+        self.lineno_target = lineno
+        self.alpha = 255
+        self.count = 0
+
+        self.gap = 0
+
+        self.resolution = 6
+        
+        
+    def set_lineno(self, lineno, animation=True, force=False):
+        # lineno は target に設定され、その gap 間はアニメーションになる
+        
+        if force:
+            self.lineno = lineno
+        
+        self.animation = animation
+        
+        self.lineno_target = lineno
+        self.gap = self.lineno_target - self.lineno
+            
+        self.alpha = 255
+        self.count = 0
+
+        
+    def get_lineno(self):
+        if not self.animation:
+            return 0
+        
+        if self.gap < 0 and self.lineno < self.lineno_target:
+            lineno = self.lineno_target
+            self.lineno = lineno
+        elif self.gap > 0 and self.lineno > self.lineno_target:
+            lineno = self.lineno_target
+            self.lineno = lineno
+
+        return math.floor(self.lineno)
+        
+        
+    def update(self):
+        self.count += 1
+        
+        if not (self.count < self.resolution):
+            self.alpha = 0
+            self.lineno = self.lineno_target
+            return
+            
+        #self.alpha = int(self.alpha - (self.alpha / self.resolution) * 1.1)
+        #self.lineno = self.lineno + ((self.lineno_target - self.lineno) / self.resolution)*0.1
+
+        self.alpha = int(self.alpha - (self.alpha / self.resolution) * 3)
+        self.lineno = self.lineno + ((self.lineno_target - self.lineno) / self.resolution)*0.2
+
+        
+    def is_finished(self):
+        if self.count <= self.resolution:
+            return False
+        else:
+            return True
+            
+
+        
+        
 
 class MyHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -135,7 +205,8 @@ class QCodeEditor(QPlainTextEdit):
         
         self.hlineno = 0
         self.tabStop = 4
-
+        
+        
         self.setAcceptDrops(False)
 
         self.highligher = MyHighlighter(self.document())
@@ -147,6 +218,11 @@ class QCodeEditor(QPlainTextEdit):
         }
         
 
+        # linetracer
+        self.line_tracer = MyLineTracer()
+        self.timer_lt = QTimer()
+
+        
     # paste のイベント
     def insertFromMimeData(self, source):
         if source.hasText():
@@ -414,7 +490,6 @@ class QCodeEditor(QPlainTextEdit):
                 char_cursor = self.textCursor()
                 char_position = char_cursor.position()
 
-                # 行末での入力ならばオートコンプリートさせる
                 char_cursor.movePosition(QTextCursor.EndOfBlock,
                                          QTextCursor.KeepAnchor)
                 selected_text = char_cursor.selectedText()
@@ -469,13 +544,21 @@ class QCodeEditor(QPlainTextEdit):
             cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
             self.setTextCursor(cursor)                
             self.hlineno = 0
+            self.line_tracer.set_lineno(0)
             
         self.highlightLine()
         self.highlightCurrentLine()
 
         
         
-    def setHighlightLineno(self, lineno):            
+    def setHighlightLineno(self, lineno, animation=True):
+        if animation != self.line_tracer.animation:
+            # line tracer がトレースしていないかもしれないので、現在地をセット
+            self.line_tracer.set_lineno(self.hlineno, force=True)
+
+        
+        self.line_tracer.set_lineno(lineno, animation)
+        
         self.hlineno = lineno
         self.highlightLine()
         
@@ -485,7 +568,39 @@ class QCodeEditor(QPlainTextEdit):
     def highlightLine(self):
 
         if self.hlineno > 0:
+            extraSelections = []
+
+
+
+            # line tracer 用
+            if self.line_tracer.get_lineno() > 0:
+                self.line_tracer.update()
+                
+                selection_lt = QTextEdit.ExtraSelection()
+
+                alpha = self.line_tracer.alpha
+                lineColor_lt = QColor(Qt.green).lighter(160)
+                lineColor_lt.setAlpha(self.line_tracer.alpha)
+                selection_lt.format.setBackground(lineColor_lt)
+                selection_lt.format.setProperty(QTextFormat.FullWidthSelection,
+                                             True)
+                selection_lt.cursor = self.textCursor()
+
+                hlineno_lt = self.line_tracer.get_lineno()
+                selection_lt.cursor = QTextCursor(self.document().findBlockByNumber(hlineno_lt -1))
+                self.setTextCursor(selection_lt.cursor)
+                selection_lt.cursor.clearSelection()
+                extraSelections.append(selection_lt)
+
+                if not self.line_tracer.is_finished():
+                    #gap = self.line_tracer.gap
+                    self.timer_lt.singleShot(50, self.highlightLine)
+                    
+
+
+            
             selection = QTextEdit.ExtraSelection()
+            
             lineColor = QColor(Qt.green).lighter(160)
             selection.format.setBackground(lineColor)
             selection.format.setProperty(QTextFormat.FullWidthSelection,
@@ -493,10 +608,16 @@ class QCodeEditor(QPlainTextEdit):
             selection.cursor = self.textCursor()
 
             selection.cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
-            self.setTextCursor(selection.cursor)
+            if self.line_tracer.get_lineno() == 0:
+                self.setTextCursor(selection.cursor)
+                
             selection.cursor.clearSelection()
+            extraSelections.append(selection)
 
-            self.setExtraSelections([selection])
+
+                    
+            self.setExtraSelections(extraSelections)
+                
 
             return
             

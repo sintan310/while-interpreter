@@ -167,9 +167,9 @@ class CentralWidget(QWidget):
         return self.editor.toPlainText()
 
     
-    def set_HighlightLine(self, lineno):
-        self.editor.setHighlightLineno(lineno)
-        self.editor.highlightLine()
+    def set_HighlightLine(self, lineno, animation=True):
+        self.editor.setHighlightLineno(lineno, animation)
+        #self.editor.highlightLine()
         
         
     def clear_HighlightLine(self):
@@ -465,17 +465,29 @@ class MainWindow(QMainWindow):
                                       triggered=self.reset_config)
         self.toolMenu.addAction(self.reset_config_act)
 
-        self.toolMenu.addSeparator()
 
-        self.debugDockAct = QAction('デバッグ表示', self,
-                                         statusTip='デバッグ表示',
+        self.debugMenu = self.menuBar().addMenu('デバッグ')
+        self.debugDockAct = QAction('ドッグの表示', self,
+                                         statusTip='ドッグの表示',
                                          triggered=self.show_Dock)        
-        self.toolMenu.addAction(self.debugDockAct)
+        self.debugMenu.addAction(self.debugDockAct)
         
         self.debugDockAct.setObjectName("debugDock_enabled")        
         self.debugDockAct.setCheckable(True)
         self.debugDockAct.setChecked(True)
+
+        self.debugAnimationAct = QAction('アニメーション', self,
+                                         statusTip='アニメーション',
+                                         triggered=self.set_debug_animation)
+        self.debugMenu.addAction(self.debugAnimationAct)
+
         
+        self.debugAnimationAct.setObjectName("debugAnimation_enabled")        
+        self.debugAnimationAct.setCheckable(True)
+        self.debugAnimationAct.setChecked(True)
+
+        # animation 用フラグ
+        self.debug_animation = True
 
         
         # ヘルプメニュー
@@ -488,6 +500,10 @@ class MainWindow(QMainWindow):
         self.helpMenu.addAction(self.aboutAct)
         
 
+    def set_debug_animation(self):
+        self.debug_animation = self.debugAnimationAct.isChecked()
+    
+        
 
     def maybeSave(self):
         if not self.centralWidget.editor.document().isModified():
@@ -752,7 +768,8 @@ class MainWindow(QMainWindow):
             self.startButton.setEnabled(False)
             self.startProgramAct.setEnabled(True)
             
-            self.centralWidget.set_HighlightLine(first_executable_lineno)
+            self.centralWidget.set_HighlightLine(first_executable_lineno,
+                                                 self.debug_animation)
             self.centralWidget.set_ReadOnly(True)
 
             self.history.set_firstGeneration({'env':{},
@@ -769,7 +786,8 @@ class MainWindow(QMainWindow):
         self.history.change_generation_previous()
         
         current = self.history.get_elem()
-        self.centralWidget.set_HighlightLine(current['lineno'])
+        self.centralWidget.set_HighlightLine(current['lineno'],
+                                             self.debug_animation)
         
         if self.history.is_theFirstGeneration():
 
@@ -796,7 +814,8 @@ class MainWindow(QMainWindow):
             current = self.history.get_elem()
             self.tableView.set_data(current['env'])
             
-            self.centralWidget.set_HighlightLine(current['lineno'])
+            self.centralWidget.set_HighlightLine(current['lineno'],
+                                                 self.debug_animation)
             
             if self.history.is_theLatestGeneration():
                 if current['lineno'] == 0:
@@ -886,7 +905,8 @@ class MainWindow(QMainWindow):
 
             else:
                 # self.startDebugButton.setEnabled(True)
-                self.centralWidget.set_HighlightLine(evaluatorInfo['lineno'])
+                self.centralWidget.set_HighlightLine(evaluatorInfo['lineno'],
+                                                     self.debug_animation)
             
             
         
@@ -1012,14 +1032,22 @@ class MainWindow(QMainWindow):
         width = setting.value("tableview_column_width")
         self.tableView.set_HeaddaColumnWidth(int(width))
 
-        # メニュー->ツール->デバッグ表示 のチェック
+        # メニュー->デバッグ->ドッグの表示 のチェック
         checked = setting.value(self.debugDockAct.objectName())
-        if checked == "true":
-            checked = True
-        else:
+        if checked == "false": 
             checked = False
+        else:
+            checked = True
         self.debugDockAct.setChecked(checked)
         self.show_Dock()
+
+        checked = setting.value(self.debugAnimationAct.objectName())
+        if checked == "false":
+            checked = False
+        else:
+            checked = True
+        self.debugAnimationAct.setChecked(checked)
+        self.debug_animation = checked
         
                 
     def saveSettings(self):
@@ -1054,7 +1082,9 @@ class MainWindow(QMainWindow):
 
         # メニュー->ツール->デバッグ表示 のチェック
         setting.setValue(self.debugDockAct.objectName(),
-                         self.debugDockAct.isChecked())
+                         self.debugDockAct.isChecked())        
+        setting.setValue(self.debugAnimationAct.objectName(),
+                         self.debugAnimationAct.isChecked())
         
         #program = self.centralWidget.get_program()
         #setting.setValue("program", program)

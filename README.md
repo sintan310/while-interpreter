@@ -40,10 +40,10 @@ pip install PySide2 ply
 
 ### Windows10 向け実行ファイル
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。
-右側の「Releases」 v1.3.3 のリリースから while-v1.3.3-release-Win10-64bit.zip を入手し、
-展開してから  while-v1.3.3-release-Win10-64bit.exe をダブルクリックして使ってください。
+右側の「Releases」 v1.3.4 のリリースから while-v1.3.4-release-Win10-64bit.zip を入手し、
+展開してから  while-v1.3.4-release-Win10-64bit.exe をダブルクリックして使ってください。
 下記リンクからも入手できます：
-https://github.com/sintan310/while-interpreter/releases/download/v1.3.3-release/while-v1.3.3-release-Win10-64bit.zip
+https://github.com/sintan310/while-interpreter/releases/download/v1.3.4-release/while-v1.3.4-release-Win10-64bit.zip
 
 
 
@@ -157,17 +157,16 @@ end
 
 - 文字、文字列について：
     - 文字、文字列は「"」で囲みます。例えば、文字列 hello は ```"hello"```
-と書きます。文字列の同一性判定には ```=``` が使えます。
+    と書きます。文字列の同一性判定には ```=``` が使えます。
 
     - 文字列の連結には「+」を使ってください。例えば、"abc" と "xyz" を連結する場合には、
- ```"abc" + "xyz"```
-と書きます。連結の結果は ```"abcxyz"``` となります。
-なお、文字列と自然数も「+」で連結できます。例えば、
-```"abc" + 123```
-の結果は、```"abc123"``` となります。
+     ```"abc" + "xyz"```
+     と書きます。連結の結果は ```"abcxyz"``` となります。
+     なお、文字列と自然数も「+」で連結できます。例えば、
+     ```"abc" + 123```
+     の結果は、```"abc123"``` となります。
 
     - 文字列の長さ（文字数）の取得、配列の長さ（要素数）の取得には手続き len を使ってください（組み込み手続きとして実装しています）。
-    
 ```
 begin
   # "abc" は3文字の文字列なので、x には 3 が代入される
@@ -320,7 +319,7 @@ end
 
 テープの初期状態
 |▷|1|1|1|
-| --- | --- | --- | --- | 
+| --- | --- | --- | --- |
 
 ヘッド位置:1（「▷」のところ）
 

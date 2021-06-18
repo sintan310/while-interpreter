@@ -16,9 +16,9 @@ from PySide2.QtGui import (QColor, QPainter, QTextFormat, QTextBlockFormat,
 import math
 
 class MyLineTracer:
-    def __init__(self, lineno=1, animation=True):
+    def __init__(self, lineno=1, trail=True):
                 
-        self.animation = animation
+        self.trail = trail
         
         self.lineno = lineno
         self.lineno_target = lineno
@@ -30,13 +30,13 @@ class MyLineTracer:
         self.resolution = 6
         
         
-    def set_lineno(self, lineno, animation=True, force=False):
+    def set_lineno(self, lineno, trail=True, force=False):
         # lineno は target に設定され、その gap 間はアニメーションになる
         
         if force:
             self.lineno = lineno
         
-        self.animation = animation
+        self.trail = trail
         
         self.lineno_target = lineno
         self.gap = self.lineno_target - self.lineno
@@ -46,7 +46,7 @@ class MyLineTracer:
 
         
     def get_lineno(self):
-        if not self.animation:
+        if not self.trail:
             return 0
         
         if self.gap < 0 and self.lineno < self.lineno_target:
@@ -511,7 +511,7 @@ class QCodeEditor(QPlainTextEdit):
             digits += 1
         space = 3 + self.fontMetrics().width('9') * digits
         """
-        space = 3 + self.fontMetrics().width('9') * 3
+        space = 10 + self.fontMetrics().width('9') * 3
         return space
     
 
@@ -551,13 +551,13 @@ class QCodeEditor(QPlainTextEdit):
 
         
         
-    def setHighlightLineno(self, lineno, animation=True):
-        if animation != self.line_tracer.animation:
+    def setHighlightLineno(self, lineno, trail=True):
+        if trail != self.line_tracer.trail:
             # line tracer がトレースしていないかもしれないので、現在地をセット
             self.line_tracer.set_lineno(self.hlineno, force=True)
 
         
-        self.line_tracer.set_lineno(lineno, animation)
+        self.line_tracer.set_lineno(lineno, trail)
         
         self.hlineno = lineno
         self.highlightLine()
@@ -654,7 +654,7 @@ class QCodeEditor(QPlainTextEdit):
     def lineNumberAreaPaintEvent(self, event):
 
         painter = QPainter(self.lineNumberArea)
-
+        painter.setFont(self.font())        
         painter.fillRect(event.rect(), Qt.lightGray)
 
         block = self.firstVisibleBlock()
@@ -667,8 +667,11 @@ class QCodeEditor(QPlainTextEdit):
         while block.isValid() and (top <= event.rect().bottom()):
             if block.isVisible() and (bottom >= event.rect().top()):
                 number = str(blockNumber + 1)
-                painter.setPen(Qt.black)
-                painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignRight, number)
+                #painter.setPen(Qt.black)
+                painter.setPen(Qt.darkGray)
+                painter.drawText(0, top,
+                                 self.lineNumberArea.width()-3, height,
+                                 Qt.AlignRight, number)
 
             block = block.next()
             top = bottom

@@ -112,6 +112,7 @@ class CentralWidget(QWidget):
 
         self.editor = QCodeEditor()        
         self.editor.setUndoRedoEnabled(True)
+        self.editor.setStyleSheet("border:0px")
         
         
         # 実行結果の表示用
@@ -119,7 +120,7 @@ class CentralWidget(QWidget):
         self.messageArea = QTextEdit()
         self.messageArea.setReadOnly(True)
         self.messageArea.setUndoRedoEnabled(False)
-        self.messageArea.setStyleSheet("background-color: #e0e0e0")
+        self.messageArea.setStyleSheet("background-color: #e0e0e0;border:0px")
 
         rowHeight = self.fontMetrics().lineSpacing()
         self.messageArea.setMinimumHeight(rowHeight * 1)
@@ -127,7 +128,8 @@ class CentralWidget(QWidget):
         # メイン画面に部品を配置する
         layout = QGridLayout()
         layout.setSpacing(0)
-        layout.setContentsMargins(5,0,5,5 )
+        #layout.setContentsMargins(5,0,5,5 )
+        layout.setContentsMargins(0,0,0,0)
 
         self.splitter = QSplitter()
         self.splitter.setOrientation(Qt.Orientation.Vertical)
@@ -167,8 +169,8 @@ class CentralWidget(QWidget):
         return self.editor.toPlainText()
 
     
-    def set_HighlightLine(self, lineno, animation=True):
-        self.editor.setHighlightLineno(lineno, animation)
+    def set_HighlightLine(self, lineno, trail=True):
+        self.editor.setHighlightLineno(lineno, trail)
         #self.editor.highlightLine()
         
         
@@ -205,6 +207,11 @@ class MainWindow(QMainWindow):
         self.title = 'WHILE Program Interpreter'
         self.set_window_title(self.fname_with_path)
 
+        # Central Widget
+        self.centralWidget = CentralWidget(parent=parent)
+        self.setCentralWidget(self.centralWidget)
+        self.centralWidget.editor.document().modificationChanged.connect(self.modified_event)
+
         
         # Menu Bar
         self.setup_MenuBar()
@@ -215,10 +222,6 @@ class MainWindow(QMainWindow):
         # ドック
         self.setup_Dock()
 
-        # Central Widget
-        self.centralWidget = CentralWidget(parent=parent)
-        self.setCentralWidget(self.centralWidget)
-        self.centralWidget.editor.document().modificationChanged.connect(self.modified_event)
         
 
         # main 関数で focus をもらうため（すべて表示し終わった main 内で実行させる）
@@ -351,28 +354,32 @@ class MainWindow(QMainWindow):
         
 
         # Dock の作成
-        self.addDock = QDockWidget('デバッグ', self)        
-        self.addDock.setObjectName("dock")        
-        self.addDock.setWidget(debugWidget)
-        self.addDock.setContentsMargins(0,0,0,0)
+        self.debugDock = QDockWidget('デバッグ', self)        
+        self.debugDock.setObjectName("dock")        
+        self.debugDock.setWidget(debugWidget)
+        self.debugDock.setContentsMargins(0,0,0,0)
                 
-        self.addDock.setAllowedAreas(Qt.AllDockWidgetAreas)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.addDock)
-        self.addDock.installEventFilter(self)        
+        self.debugDock.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.debugDock)
+
+        # Dock が閉じた時の処理用に eventFilter 関数を使う
+        self.debugDock.installEventFilter(self)        
 
 
 
     def show_Dock(self):
+        """
         if self.debugDockAct.isChecked():
-            self.addDock.show()
+            self.debugDock.show()
         else:
-            self.addDock.hide()
-
+            self.debugDock.hide()
+        """
+        self.debugDock.setVisible(self.debugDockAct.isChecked())
         
     def eventFilter(self, source, event):
         if (event.type() == QEvent.Close and \
             isinstance(source, QDockWidget)):
-            # ドッグが閉じた時の処理
+            # Dock が閉じた時の処理
             
             #print(source.windowTitle())
             #print(source.objectName())
@@ -408,6 +415,10 @@ class MainWindow(QMainWindow):
 
         self.fileMenu.addAction(self.openFileAct)
 
+        
+        self.fileMenu.addSeparator()
+
+        
         self.saveFileAct = QAction('上書き保存', self,
                                          #shortcut="Ctrl+Q",
                                          statusTip='上書き保存',
@@ -426,6 +437,17 @@ class MainWindow(QMainWindow):
 
         self.fileMenu.addSeparator()
         
+        subFileMenu = self.fileMenu.addMenu('設定')
+
+        self.reset_config_act = QAction('配置設定の初期化...', self,
+                                      statusTip='配置設定の初期化',
+                                      triggered=self.reset_config)
+        subFileMenu.addAction(self.reset_config_act)
+
+
+        
+        self.fileMenu.addSeparator()
+        
         self.exitAct = QAction('終了する', self,
                                          #shortcut="Ctrl+Q",
                                          statusTip='終了する',
@@ -433,9 +455,139 @@ class MainWindow(QMainWindow):
         self.exitAct.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
         self.fileMenu.addAction(self.exitAct)
 
+
+        # 編集メニュー
+        self.editMenu = self.menuBar().addMenu('編集')
+
+
+
+        self.undoAction = QAction("元に戻す",self,
+                                 shortcut="Ctrl+Z",
+                                 statusTip="編集作業を一つ戻します",
+                                 triggered=self.centralWidget.editor.undo)
+        self.undoAction.setEnabled(False)
+        self.centralWidget.editor.undoAvailable.connect(self.undoAction.setEnabled)
+        self.editMenu.addAction(self.undoAction)
+
+
+        self.redoAction = QAction("やり直し",self,
+                                 shortcut="Ctrl+Y",
+                                 statusTip="Undo された編集作業を一つ戻します",
+                                 triggered=self.centralWidget.editor.redo)
+        self.redoAction.setEnabled(False)
+        self.centralWidget.editor.redoAvailable.connect(self.redoAction.setEnabled)
+        self.editMenu.addAction(self.redoAction)
+
+        # ---
+        self.editMenu.addSeparator()
+        # ---
+
+        self.cutAction = QAction("切り取り",self,
+                                 shortcut="Ctrl+X",
+                                 statusTip="選択領域を削除してクリップボードへ貼り付けます",
+                                 triggered=self.centralWidget.editor.cut)
+        self.editMenu.addAction(self.cutAction)
+
+        self.copyAction = QAction("コピー",self,
+                                  shortcut="Ctrl+C",
+                                  statusTip="選択領域をクリップボードへ貼り付けます",
+                                  triggered=self.centralWidget.editor.copy)
+        self.editMenu.addAction(self.copyAction)
+
+        self.pasteAction = QAction("貼り付け",self,
+                                   shortcut="Ctrl+V",
+                                   statusTip="クリップボードから貼り付けます",
+                                   triggered=self.centralWidget.editor.paste)
+        self.editMenu.addAction(self.pasteAction)
+        
+        # ---
+        self.editMenu.addSeparator()
+        # ---
+
+        self.selectAllAction = QAction("すべて選択",self,
+                                       shortcut="Ctrl+A",
+                                       statusTip="すべての行を選択します",
+                                       triggered=self.centralWidget.editor.selectAll)
+        self.editMenu.addAction(self.selectAllAction)
+        
+        """
+    self.copyAction = QtGui.QAction(QtGui.QIcon("icons/copy.png"),"Copy to clipboard",self)
+    self.copyAction.setStatusTip("Copy text to clipboard")
+    self.copyAction.setShortcut("Ctrl+C")
+    self.copyAction.triggered.connect(self.text.copy)
+     
+    self.pasteAction = QtGui.QAction(QtGui.QIcon("icons/paste.png"),"Paste from clipboard",self)
+    self.pasteAction.setStatusTip("Paste text from clipboard")
+    self.pasteAction.setShortcut("Ctrl+V")
+    self.pasteAction.triggered.connect(self.text.paste)
+     
+    self.undoAction = QtGui.QAction(QtGui.QIcon("icons/undo.png"),"Undo last action",self)
+    self.undoAction.setStatusTip("Undo last action")
+    self.undoAction.setShortcut("Ctrl+Z")
+    self.undoAction.triggered.connect(self.text.undo)
+     
+    self.redoAction = QtGui.QAction(QtGui.QIcon("icons/redo.png"),"Redo last undone thing",self)
+    self.redoAction.setStatusTip("Redo last undone thing")
+    self.redoAction.setShortcut("Ctrl+Y")
+    self.redoAction.triggered.connect(self.text.redo)
+        """
+
+
+
+
+
+        
+
+
+        
+        # 表示メニュー
+        self.visualMenu = self.menuBar().addMenu('表示')
+
+        self.toolBarVisibleAct = QAction('ツールバー', self,
+                                         statusTip='ツールバーの表示',
+                                         triggered=self.toggle_toolBar)        
+        self.toolBarVisibleAct.setObjectName("toolbar_enabled")        
+        self.toolBarVisibleAct.setCheckable(True)
+        self.toolBarVisibleAct.setChecked(True)
+        self.visualMenu.addAction(self.toolBarVisibleAct)
+
+        self.visualMenu.addSeparator()
+
+        subDebugMenu = self.visualMenu.addMenu('デバッグ')
+        
+        self.debugDockAct = QAction('ドッグの表示', self,
+                                         statusTip='ドッグの表示',
+                                         triggered=self.show_Dock)        
+        self.debugDockAct.setObjectName("debugDock_enabled")        
+        self.debugDockAct.setCheckable(True)
+        self.debugDockAct.setChecked(True)
+        subDebugMenu.addAction(self.debugDockAct)
+        
+
+        self.debugTrailAct = QAction('軌跡', self,
+                                         statusTip='軌跡',
+                                         triggered=self.set_debug_trail)
+        self.debugTrailAct.setObjectName("debugTrail_enabled")        
+        self.debugTrailAct.setCheckable(True)
+        self.debugTrailAct.setChecked(True)
+        subDebugMenu.addAction(self.debugTrailAct)
+        self.debug_tail = True         # animation 用フラグ
+
+        
+        self.visualMenu.addSeparator()
+        
+
+        self.selectFontAct = QAction('フォントの選択...', self,
+                                         statusTip='フォントの選択',
+                                         triggered=self.select_font)        
+        self.visualMenu.addAction(self.selectFontAct)
+        
+        
+        
         
         # ツールメニュー
         self.toolMenu = self.menuBar().addMenu('ツール')
+
 
         self.startProgramAct = QAction('プログラムの実行', self,
                                          statusTip='プログラムの実行',
@@ -451,43 +603,8 @@ class MainWindow(QMainWindow):
         self.toolMenu.addAction(self.stopProgramAct)
         self.stopProgramAct.setEnabled(False)
         
-        self.toolMenu.addSeparator()
 
         
-        self.selectFontAct = QAction('フォントの選択', self,
-                                         statusTip='フォントの選択',
-                                         triggered=self.select_font)        
-        self.toolMenu.addAction(self.selectFontAct)
-        
-        
-        self.reset_config_act = QAction('配置設定の初期化', self,
-                                      statusTip='配置設定の初期化',
-                                      triggered=self.reset_config)
-        self.toolMenu.addAction(self.reset_config_act)
-
-
-        self.debugMenu = self.menuBar().addMenu('デバッグ')
-        self.debugDockAct = QAction('ドッグの表示', self,
-                                         statusTip='ドッグの表示',
-                                         triggered=self.show_Dock)        
-        self.debugMenu.addAction(self.debugDockAct)
-        
-        self.debugDockAct.setObjectName("debugDock_enabled")        
-        self.debugDockAct.setCheckable(True)
-        self.debugDockAct.setChecked(True)
-
-        self.debugAnimationAct = QAction('アニメーション', self,
-                                         statusTip='アニメーション',
-                                         triggered=self.set_debug_animation)
-        self.debugMenu.addAction(self.debugAnimationAct)
-
-        
-        self.debugAnimationAct.setObjectName("debugAnimation_enabled")        
-        self.debugAnimationAct.setCheckable(True)
-        self.debugAnimationAct.setChecked(True)
-
-        # animation 用フラグ
-        self.debug_animation = True
 
         
         # ヘルプメニュー
@@ -498,10 +615,17 @@ class MainWindow(QMainWindow):
         self.aboutAct = QAction('使い方', self, statusTip='使い方',
                                 triggered=self.about)
         self.helpMenu.addAction(self.aboutAct)
-        
 
-    def set_debug_animation(self):
-        self.debug_animation = self.debugAnimationAct.isChecked()
+
+    def toggle_toolBar(self):
+        toolbar = [self.toolBar, self.toolBar2]
+        for tb in toolbar:
+            tb.setVisible(self.toolBarVisibleAct.isChecked())
+            
+
+        
+    def set_debug_trail(self):
+        self.debug_trail = self.debugTrailAct.isChecked()
     
         
 
@@ -659,14 +783,16 @@ class MainWindow(QMainWindow):
 
     def reset_config(self):
         reply = QMessageBox.question(self, 'UI 配置の初期化', 
-                                     'UI 配置情報の設定ファイルを削除しますか？',
+                                     '設定ファイルを削除することになります。'
+                                     +'\n続けても良いでしょうか？',
                                      QMessageBox.Yes, QMessageBox.Cancel)
 
         if reply == QMessageBox.Yes:
             self.resetConfigFlag = False
             os.remove(CONFIG_FILE)
-            QMessageBox.about(self, "設定ファイルの削除",
-            "UI 配置情報の設定ファイルを削除しました。アプリを再起動すると、UI の配置が初期化されます")
+
+            QMessageBox.about(self, "設定ファイルを削除しました",
+            "設定ファイルを削除しました。アプリを再起動すると、UI の配置が初期化されます")
             
             
             
@@ -675,19 +801,19 @@ class MainWindow(QMainWindow):
     # ツールバー関連
     # -----------------------------------------------------------------
     def setup_ToolBar(self):
-        toolBar = QToolBar()
-        toolBar.setStyleSheet("QToolBar{spacing:10px; padding: 5px; border:0px}")
-        toolBar.setObjectName("toolbar")        
+        self.toolBar = QToolBar()
+        self.toolBar.setStyleSheet("QToolBar{spacing:10px; padding: 5px; border:0px}")
+        self.toolBar.setObjectName("toolbar")        
         
         
-        self.addToolBar(toolBar)
+        self.addToolBar(self.toolBar)
         
         # newfile
         self.newFileButton = QToolButton()
         self.newFileButton.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
         self.newFileButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.newFileButton.clicked.connect(self.new_file)
-        toolBar.addWidget(self.newFileButton)        
+        self.toolBar.addWidget(self.newFileButton)        
 
         
         # openfile
@@ -695,7 +821,7 @@ class MainWindow(QMainWindow):
         self.openFileButton.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.openFileButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.openFileButton.clicked.connect(self.open_file)
-        toolBar.addWidget(self.openFileButton)        
+        self.toolBar.addWidget(self.openFileButton)        
 
         
         # savefile
@@ -704,21 +830,21 @@ class MainWindow(QMainWindow):
         self.saveFileButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.saveFileButton.clicked.connect(self.save_file)
         self.saveFileButton.setEnabled(False)
-        toolBar.addWidget(self.saveFileButton)        
+        self.toolBar.addWidget(self.saveFileButton)        
         
 
 
-        toolBar2 = QToolBar()
-        toolBar2.setStyleSheet("QToolBar{spacing:10px; padding: 5px; border:0px}")
-        toolBar2.setObjectName("toolbar2")        
-        self.addToolBar(toolBar2)
+        self.toolBar2 = QToolBar()
+        self.toolBar2.setStyleSheet("QToolBar{spacing:10px; padding: 5px; border:0px}")
+        self.toolBar2.setObjectName("toolbar2")        
+        self.addToolBar(self.toolBar2)
         
         # run program
         self.startButton = QToolButton()
         self.startButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.startButton.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.startButton.clicked.connect(self.run_program)
-        toolBar2.addWidget(self.startButton)        
+        self.toolBar2.addWidget(self.startButton)        
 
         # stop program
         self.stopButton = QToolButton()
@@ -726,7 +852,7 @@ class MainWindow(QMainWindow):
         self.stopButton.clicked.connect(self.stop_program)
         self.stopButton.setEnabled(False)
         self.stopProgramAct.setEnabled(False)
-        toolBar2.addWidget(self.stopButton)        
+        self.toolBar2.addWidget(self.stopButton)        
 
 
         
@@ -769,7 +895,7 @@ class MainWindow(QMainWindow):
             self.startProgramAct.setEnabled(True)
             
             self.centralWidget.set_HighlightLine(first_executable_lineno,
-                                                 self.debug_animation)
+                                                 self.debug_trail)
             self.centralWidget.set_ReadOnly(True)
 
             self.history.set_firstGeneration({'env':{},
@@ -787,7 +913,7 @@ class MainWindow(QMainWindow):
         
         current = self.history.get_elem()
         self.centralWidget.set_HighlightLine(current['lineno'],
-                                             self.debug_animation)
+                                             self.debug_trail)
         
         if self.history.is_theFirstGeneration():
 
@@ -815,7 +941,7 @@ class MainWindow(QMainWindow):
             self.tableView.set_data(current['env'])
             
             self.centralWidget.set_HighlightLine(current['lineno'],
-                                                 self.debug_animation)
+                                                 self.debug_trail)
             
             if self.history.is_theLatestGeneration():
                 if current['lineno'] == 0:
@@ -906,7 +1032,7 @@ class MainWindow(QMainWindow):
             else:
                 # self.startDebugButton.setEnabled(True)
                 self.centralWidget.set_HighlightLine(evaluatorInfo['lineno'],
-                                                     self.debug_animation)
+                                                     self.debug_trail)
             
             
         
@@ -989,6 +1115,12 @@ class MainWindow(QMainWindow):
         
 
 
+    def str_to_bool(self, string):
+        if string == "false":
+            return False
+        else:
+            return True
+        
     def initSettings(self):
         # Window Size
         # self.setFixedSize(750, 700)
@@ -1033,21 +1165,20 @@ class MainWindow(QMainWindow):
         self.tableView.set_HeaddaColumnWidth(int(width))
 
         # メニュー->デバッグ->ドッグの表示 のチェック
-        checked = setting.value(self.debugDockAct.objectName())
-        if checked == "false": 
-            checked = False
-        else:
-            checked = True
+        checked = self.str_to_bool(setting.value(self.debugDockAct.objectName()))
         self.debugDockAct.setChecked(checked)
         self.show_Dock()
 
-        checked = setting.value(self.debugAnimationAct.objectName())
-        if checked == "false":
-            checked = False
-        else:
-            checked = True
-        self.debugAnimationAct.setChecked(checked)
-        self.debug_animation = checked
+        
+        checked = self.str_to_bool(setting.value(self.debugTrailAct.objectName()))
+        self.debugTrailAct.setChecked(checked)
+        self.debug_trail = checked
+
+        
+        checked = self.str_to_bool(setting.value(self.toolBarVisibleAct.objectName()))
+        self.toolBarVisibleAct.setChecked(checked)
+        self.toggle_toolBar()
+
         
                 
     def saveSettings(self):
@@ -1083,8 +1214,11 @@ class MainWindow(QMainWindow):
         # メニュー->ツール->デバッグ表示 のチェック
         setting.setValue(self.debugDockAct.objectName(),
                          self.debugDockAct.isChecked())        
-        setting.setValue(self.debugAnimationAct.objectName(),
-                         self.debugAnimationAct.isChecked())
+        setting.setValue(self.debugTrailAct.objectName(),
+                         self.debugTrailAct.isChecked())
+        setting.setValue(self.toolBarVisibleAct.objectName(),
+                         self.toolBarVisibleAct.isChecked())
+
         
         #program = self.centralWidget.get_program()
         #setting.setValue("program", program)

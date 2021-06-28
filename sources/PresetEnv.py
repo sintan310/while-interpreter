@@ -12,7 +12,7 @@ class SimpleTableModel(QAbstractTableModel):
     def __init__(self, font=None, parent=None):
         super().__init__(parent)
         
-        self.title = ["名前", "値"]
+        self.title = ["変数名", "値"]
         self.mydata = [["",""],["",""],["",""]]
 
         self.checker = SyntaxChecker()

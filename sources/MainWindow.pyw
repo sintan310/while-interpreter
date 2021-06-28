@@ -460,7 +460,7 @@ class MainWindow(QMainWindow):
         presetWidget.setContentsMargins(0,0,0,0)
 
         # Dock の作成
-        self.presetDock = QDockWidget('初期状態', self)        
+        self.presetDock = QDockWidget('変数の初期値', self)        
         self.presetDock.setObjectName("preset-dock")        
         self.presetDock.setWidget(presetWidget)        
         self.presetDock.setContentsMargins(0,0,0,0)
@@ -476,6 +476,9 @@ class MainWindow(QMainWindow):
         # https://forum.qt.io/topic/94473/qdockwidget-resize-issue/16
         # なぜかこれで最小サイズになる（最後のメッセージ欄を参照）
         self.resizeDocks([self.presetDock], [1], Qt.Vertical)
+
+        self.presetDock.installEventFilter(self)        
+
         
 
     def enable_removeItemButton(self, selected, deselected):
@@ -588,6 +591,10 @@ class MainWindow(QMainWindow):
             self.debugDock.hide()
         """
         self.debugDock.setVisible(self.debugDockAct.isChecked())
+
+    def show_presetDock(self):
+        self.presetDock.setVisible(self.presetDockAct.isChecked())
+        
         
     def eventFilter(self, source, event):
         if (event.type() == QEvent.Close and \
@@ -596,9 +603,11 @@ class MainWindow(QMainWindow):
             
             #print(source.windowTitle())
             #print(source.objectName())
+            if source.objectName() == self.debugDock.objectName():
+                self.debugDockAct.setChecked(False)
+            elif source.objectName() == self.presetDock.objectName():
+                self.presetDockAct.setChecked(False)
 
-            self.debugDockAct.setChecked(False)
-            
             
         return super().eventFilter(source, event)
 
@@ -798,6 +807,16 @@ class MainWindow(QMainWindow):
         subDebugMenu.addAction(self.debugTrailAct)
         self.debug_tail = True         # animation 用フラグ
 
+        
+        self.visualMenu.addSeparator()
+        subPresetMenu = self.visualMenu.addMenu('変数の初期値')
+        self.presetDockAct = QAction('ドッグの表示', self,
+                                         statusTip='ドッグの表示',
+                                         triggered=self.show_presetDock)        
+        self.presetDockAct.setObjectName("presetDock_enabled")        
+        self.presetDockAct.setCheckable(True)
+        self.presetDockAct.setChecked(True)
+        subPresetMenu.addAction(self.presetDockAct)
         
         self.visualMenu.addSeparator()
         
@@ -1414,7 +1433,7 @@ class MainWindow(QMainWindow):
         width = setting.value("tableview_column_width")
         self.envViewer.set_HeaddaColumnWidth(int(width))
 
-        # メニュー->デバッグ->ドッグの表示 のチェック
+        # メニュー->表示->デバッグ のチェック
         checked = self.str_to_bool(setting.value(self.debugDockAct.objectName()))
         self.debugDockAct.setChecked(checked)
         self.show_Dock()
@@ -1423,6 +1442,14 @@ class MainWindow(QMainWindow):
         checked = self.str_to_bool(setting.value(self.debugTrailAct.objectName()))
         self.debugTrailAct.setChecked(checked)
         self.debug_trail = checked
+
+
+        # メニュー->表示->変数の初期値 のチェック
+        checked = self.str_to_bool(setting.value(self.presetDockAct.objectName()))
+        self.presetDockAct.setChecked(checked)
+        self.show_presetDock()
+
+
 
         
         checked = self.str_to_bool(setting.value(self.toolBarVisibleAct.objectName()))
@@ -1469,6 +1496,9 @@ class MainWindow(QMainWindow):
         setting.setValue(self.toolBarVisibleAct.objectName(),
                          self.toolBarVisibleAct.isChecked())
 
+        setting.setValue(self.presetDockAct.objectName(),
+                         self.presetDockAct.isChecked())
+        
         
         #program = self.centralWidget.get_program()
         #setting.setValue("program", program)

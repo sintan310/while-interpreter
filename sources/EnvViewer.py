@@ -13,7 +13,7 @@ class EnvViewer(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.title = ["名前", "値"]
+        self.title = ["変数名", "値"]
         #self.data = {'a':20, 'b':10, 'c':2, 'd':'aaa'}
         self.previous_data = {}
         self.data = {}

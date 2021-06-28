@@ -1,6 +1,6 @@
 # whileプログラムのインタプリタ
 
-![screenshot](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot1.png)
+![screenshot](pic/screenshot1.png)
 
 これを使うと、書籍「チューリングの考えるキカイ ～人工知能の父に学ぶコンピュータ・サイエンスの基礎」
 （阿部彩芽・笠井琢美 著、技術評論社）で使われている whileプログラムが実行できます。
@@ -40,10 +40,10 @@ pip install PySide2 ply
 
 ### Windows10 向け実行ファイル
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。
-右側の「Releases」 v1.3.4 のリリースから while-v1.3.4-release-Win10-64bit.zip を入手し、
-展開してから  while-v1.3.4-release-Win10-64bit.exe をダブルクリックして使ってください。
+右側の「Releases」 v1.3.5 のリリースから while-v1.3.5-release-Win10-64bit.zip を入手し、
+展開してから  while-v1.3.5-release-Win10-64bit.exe をダブルクリックして使ってください。
 下記リンクからも入手できます：
-https://github.com/sintan310/while-interpreter/releases/download/v1.3.4-release/while-v1.3.4-release-Win10-64bit.zip
+https://github.com/sintan310/while-interpreter/releases/download/v1.3.5-release/while-v1.3.5-release-Win10-64bit.zip
 
 
 
@@ -56,7 +56,7 @@ https://github.com/sintan310/while-interpreter/releases/download/v1.3.4-release/
 画面上部のツールバーにある ```▶``` ボタンを押して実行してみましょう。
 実行結果のところに ```23``` と表示されます。
 
-![screenshot2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot3.png)
+![screenshot3](pic/screenshot3.png)
 
 なお、正しく入力されていないときにはエラーが表示されますので、
 訂正してもう一度 ```▶``` ボタンを押してください。
@@ -73,7 +73,7 @@ begin
 end
 ```
 
-![screenshot4](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot4.png)
+![screenshot4](pic/screenshot4.png)
 
 
 行頭の半角スペースは無くても結構ですが、
@@ -85,30 +85,30 @@ begin ～ end で囲まれていることが分かりやすいように
 まず、「デバッグ」と書いてあるところにある実行ボタン ```▶``` を押し、
 デバッグモードにしてみましょう。
 
-![screenshot5](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot5.png)
+![screenshot5](pic/screenshot5.png)
 
 下図のように、「次に実行される候補」の行が緑色で表示されます：
 
-![screenshot5](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot5-2.png)
+![screenshot5-2](pic/screenshot5-2.png)
 
 デバッグモードでは、```◀◀``` ボタンと```▶▶``` ボタンで、
 実行を「実行前の行」に戻すこと、「背景が緑の行」を実行することができます。
 
-![screenshot6](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6.png)
+![screenshot6](pic/screenshot6.png)
 
 ```▶▶``` ボタンを何度か（この説明通りならば1回）押して、2行目を実行してみましょう。
 変数 x に 33 が代入されますので、「デバッグ」の「名前」「値」に ```x``` と ```33``` が追加されます。
 このように、デバッグモードではプログラム実行の経過が一つ一つ確認できます。
 
-![screenshot6-2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot6-2.png)
+![screenshot6-2](pic/screenshot6-2.png)
 
 デバッグモード中はプログラム編集ができません。
 デバッグモードの終了は「デバッグ」と書いてあるところの ```■``` ボタンを押してください。
 デバッグモードが終了し、プログラム行が黄色で表示されて編集できるようになります。
 
-![screenshot7](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7.png)
+![screenshot7](pic/screenshot7.png)
 
-![screenshot7-2](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot7-2.png)
+![screenshot7-2](pic/screenshot7-2.png)
 
 
 
@@ -126,7 +126,7 @@ begin
 end
 ```
 
-![screenshot8](https://github.com/shinnya-sato/while-interpreter/blob/main/pic/screenshot8.png)
+![screenshot8](pic/screenshot8.png)
 
 ※プログラムの実行は、「実行」ボタンを押す代わりに
 キーボードショートカット Ctrl+Enter でも行えます。
@@ -382,7 +382,7 @@ begin
 
         i:=0;
         while i<kokomade do begin
-            # i から kokomade までを処理する
+            # 0 から kokomade までを処理する
     
             if list[i] > list[i+1] then begin
                 # list[i] の方が大きいので、i+1 の要素と取り換える

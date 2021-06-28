@@ -29,20 +29,22 @@ class MyThread(QThread):
 
         
 
-    def setup(self, sentences):
+    def setup(self, sentences, pre_env=[]):
         if sentences == "":
-            self.evaluatorInfo = {'noerror': False}
-            return 0
+            self.evaluatorInfo = {'noerror': False,
+                                  'lineno': 0}
+        else:
+            self.stopped = True
+            self.sentences = sentences
+            self.evaluatorInfo = self.evaluator.setup(sentences, pre_env)
 
-        self.stopped = True
-        self.sentences = sentences
-        valid = self.evaluator.setup(sentences)
+        return self.evaluatorInfo
 
-        self.evaluatorInfo = {'noerror': valid}
+    
+    def set_env(self, env):
+        self.evaluator.set_env(env)
 
-        return self.evaluator.onestep_lineno
-
-            
+        
     def stop(self):
         with QMutexLocker(self.mutex):
             self.stopped = True
@@ -72,19 +74,17 @@ class MyThread(QThread):
             
             if self.oneStep:
                 onestepInfo = self.evaluator.eval_onestep()
-                self.evaluatorInfo = {'lineno': onestepInfo['lineno'],
-                                 'env': onestepInfo['env'],
-                                 'empty': onestepInfo['empty']}
+                self.evaluatorInfo = onestepInfo
             else:
-                env = self.evaluator.eval_all()
-                self.evaluatorInfo = {'lineno': 0,
-                                 'env': env,
-                                 'empty': True}
+                self.evaluatorInfo = self.evaluator.eval_all()
 
             self.stop()
 
         else:        
-            self.evaluatorInfo = {'lineno': 0, 'env': {}, 'empty': True}
+            self.evaluatorInfo = {'lineno': 0,
+                                  'env': {},
+                                  'pretty_env': {},
+                                  'empty': True}
             
 
 

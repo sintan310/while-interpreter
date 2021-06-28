@@ -7,7 +7,7 @@
 # Others are written by Shinya Sato (15 June 2021)
 
 
-from PySide2.QtCore import Qt, QRect, QSize, QRegExp, QPoint, QTimer
+from PySide2.QtCore import Qt, QRect, QSize, QRegExp, QPoint, QTimer, Signal
 from PySide2.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 from PySide2.QtGui import (QColor, QPainter, QTextFormat, QTextBlockFormat,
                            QFont, QTextCursor,
@@ -84,10 +84,10 @@ class MyLineTracer:
         
         
 
-class MyHighlighter(QSyntaxHighlighter):
+class SyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
         super().__init__(parent)
-
+                
         keywordFormat = QTextCharFormat()
         # keywordFormat.setFontWeight(QFont.Bold)
         
@@ -171,7 +171,8 @@ class MyHighlighter(QSyntaxHighlighter):
         
     def highlightBlock(self, text):
         for pattern, format in self.highlightingRules:
-            expression = QRegExp(pattern)
+            #expression = QRegExp(pattern)
+            expression = pattern
             index = expression.indexIn(text)
             while index >= 0:
                 length = expression.matchedLength()
@@ -179,7 +180,12 @@ class MyHighlighter(QSyntaxHighlighter):
                 index = expression.indexIn(text, index + length)
 
 
+            
+                
+                
 
+
+                
 class QLineNumberArea(QWidget):
     def __init__(self, editor):
         super().__init__(editor)
@@ -193,6 +199,8 @@ class QLineNumberArea(QWidget):
 
 
 class QCodeEditor(QPlainTextEdit):
+    myclicked = Signal()
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.lineNumberArea = QLineNumberArea(self)
@@ -200,8 +208,11 @@ class QCodeEditor(QPlainTextEdit):
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
         self.updateRequest.connect(self.updateLineNumberArea)
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
-        
+       
         self.updateLineNumberAreaWidth(0)
+
+
+        #self.clicked.connect(self.field_clicked)
         
         self.hlineno = 0
         self.tabStop = 4
@@ -209,8 +220,8 @@ class QCodeEditor(QPlainTextEdit):
         
         self.setAcceptDrops(False)
 
-        self.highligher = MyHighlighter(self.document())
-
+        self.syntax_highlighter = SyntaxHighlighter(self.document())
+        
         self.bracket_list = {
             '(' : ')',
             '[' : ']',
@@ -221,6 +232,16 @@ class QCodeEditor(QPlainTextEdit):
         # linetracer
         self.line_tracer = MyLineTracer()
         self.timer_lt = QTimer()
+
+
+        # find word
+        self.keypos = 0
+        self.keyword = ""
+
+        
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.myclicked.emit()
 
         
     # paste のイベント
@@ -255,6 +276,9 @@ class QCodeEditor(QPlainTextEdit):
                 pos+=1
 
         cursor.insertText(replaced_text)
+        cursor.movePosition(QTextCursor.Start)
+        self.setTextCursor(cursor)
+        
         
 
     def indent_tab(self, cursor):
@@ -533,21 +557,131 @@ class QCodeEditor(QPlainTextEdit):
 
 
 
+
+
+    def set_find_word(self, keyword, addpos=0, initflag=True):
+        # addpos
+        # 1 or -1: self.keypos += addpos
+        #
+        # initflag:
+        # True : 初期状態（self.keypos = 0）にし、カレントへ移動しない
+        # False: self.keypos に従い、カレントも移動
+        
+        if keyword:
+            self.findWordPattern = QRegExp(keyword)
+        else:
+            self.findWordPattern = None
+            self.keypos = 0
+
+            self.setExtraSelections([])
+            cursor = self.textCursor()
+            cursor.clearSelection()
+            self.setTextCursor(cursor)                
+            
+            return
+
+        if initflag:
+            self.keypos = 0
+        else:
+            if addpos > 0:
+                self.keypos += 1
+            else:
+                self.keypos -= 1
+                if self.keypos < 0:
+                    # -1 は最後の該当箇所という意味で使う
+                    self.keypos = -1
+
+
+        # for keyword finding
+        self.findWordFormat = QTextCharFormat()
+        self.findWordFormat.setBackground(QColor(Qt.yellow).lighter(130))
+        
+        self.findWordPosFormat = QTextCharFormat()
+        self.findWordPosFormat.setBackground(QColor(Qt.darkYellow).lighter(130))
+        
+        
+
+        # Find Keyword
+        if self.findWordPattern:
+            extraSelections = []
+
+            # match した場所の記憶用
+            matched_positions = []
+
+            text = self.toPlainText()
+
+            expression = self.findWordPattern
+            
+            index = expression.indexIn(text)
+            length = expression.matchedLength()
+            while index >= 0:
+                selection = QTextEdit.ExtraSelection()
+                selection.format.setBackground(QColor(Qt.yellow))
+                selection.cursor = self.textCursor()
+                selection.cursor.setPosition(index)
+                selection.cursor.movePosition(QTextCursor.NextCharacter,
+                                              QTextCursor.KeepAnchor, length)
+                
+                matched_positions += [index]
+                extraSelections += [selection]
+                
+                index = expression.indexIn(text, index + length)
+
+
+            if matched_positions == []:
+                return
+
+            if initflag:
+                self.setExtraSelections(extraSelections)
+                return
+
+            
+            # 現在 match 場所のハイライト処理
+            try:
+                if self.keypos >= 0:
+                    index = matched_positions[self.keypos]
+                    
+                else:
+                    # 最後に match した場所
+                    self.keypos = len(matched_positions)-1
+                    index = matched_positions[self.keypos]
+
+            except:
+                self.keypos = 0
+                index = matched_positions[self.keypos]
+
+                
+            selection = QTextEdit.ExtraSelection()
+            selection.format.setBackground(QColor(Qt.darkYellow))
+            selection.cursor = self.textCursor()
+            selection.cursor.setPosition(index)
+            selection.cursor.movePosition(QTextCursor.NextCharacter,
+                                          QTextCursor.KeepAnchor, length)
+            self.setTextCursor(selection.cursor)                
+
+            extraSelections += [selection]
+                
+
+            self.setExtraSelections(extraSelections)
+            
+        
+
     def clearHighlightLine(self):
-        #cursor = self.textCursor()
-        #cursor.movePosition(QTextCursor.Start)
-        #cursor.movePosition(QTextCursor.NextBlock,
-        #                    QTextCursor.MoveAnchor,
-        #                    self.hlineno - 1)
 
         if self.hlineno > 0:
+            # 緑色背景になっている行へカーソルを移動させる
             cursor = QTextCursor(self.document().findBlockByNumber(self.hlineno -1))
+            #cursor = self.textCursor()
+            #cursor.movePosition(QTextCursor.Start)
+            #cursor.movePosition(QTextCursor.NextBlock,
+            #                    QTextCursor.MoveAnchor,
+            #                    self.hlineno - 1)
+
             self.setTextCursor(cursor)                
             self.hlineno = 0
             self.line_tracer.set_lineno(0)
             
         self.highlightLine()
-        self.highlightCurrentLine()
 
         
         
@@ -567,7 +701,10 @@ class QCodeEditor(QPlainTextEdit):
             
     def highlightLine(self):
 
-        if self.hlineno > 0:
+        if self.hlineno == 0:
+            self.setExtraSelections([])
+            
+        else:
             extraSelections = []
 
 
@@ -578,9 +715,10 @@ class QCodeEditor(QPlainTextEdit):
                 
                 selection_lt = QTextEdit.ExtraSelection()
 
-                alpha = self.line_tracer.alpha
                 lineColor_lt = QColor(Qt.green).lighter(160)
-                lineColor_lt.setAlpha(self.line_tracer.alpha)
+                alpha = self.line_tracer.alpha
+                lineColor_lt.setAlpha(alpha)
+                
                 selection_lt.format.setBackground(lineColor_lt)
                 selection_lt.format.setProperty(QTextFormat.FullWidthSelection,
                                              True)
@@ -588,17 +726,17 @@ class QCodeEditor(QPlainTextEdit):
 
                 hlineno_lt = self.line_tracer.get_lineno()
                 selection_lt.cursor = QTextCursor(self.document().findBlockByNumber(hlineno_lt -1))
-                self.setTextCursor(selection_lt.cursor)
-                selection_lt.cursor.clearSelection()
+                #self.setTextCursor(selection_lt.cursor)
+                #selection_lt.cursor.clearSelection()
                 extraSelections.append(selection_lt)
 
                 if not self.line_tracer.is_finished():
-                    #gap = self.line_tracer.gap
                     self.timer_lt.singleShot(50, self.highlightLine)
-                    
+                else:
+                    self.setTextCursor(selection_lt.cursor)
 
 
-            
+            # hightline 用
             selection = QTextEdit.ExtraSelection()
             
             lineColor = QColor(Qt.green).lighter(160)
@@ -623,36 +761,20 @@ class QCodeEditor(QPlainTextEdit):
             
 
 
-
-        
-        
     def highlightCurrentLine(self):
-        extraSelections = []
-
-        
-        if self.hlineno > 0:
-            pass
-            
-        else:
-            if not self.isReadOnly():
-
-                selection = QTextEdit.ExtraSelection()
-                lineColor = QColor(Qt.yellow).lighter(160)
-                selection.format.setBackground(lineColor)
-                selection.format.setProperty(QTextFormat.FullWidthSelection,
-                                             True)
-                selection.cursor = self.textCursor()
-                selection.cursor.clearSelection()
-                extraSelections.append(selection)
-                self.setExtraSelections(extraSelections)
-
+        self.lineNumberArea.repaint()
         
 
-
-            
+    def field_clicked(self):
+        self.set_find_word("")
+        
 
     def lineNumberAreaPaintEvent(self, event):
 
+        cursor = self.textCursor()
+        current_lineno = cursor.block().blockNumber() + 1
+        
+        
         painter = QPainter(self.lineNumberArea)
         painter.setFont(self.font())        
         painter.fillRect(event.rect(), Qt.lightGray)
@@ -662,17 +784,26 @@ class QCodeEditor(QPlainTextEdit):
         top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
         bottom = top + self.blockBoundingRect(block).height()
 
+        
         # Just to make sure I use the right font
         height = self.fontMetrics().height()
         while block.isValid() and (top <= event.rect().bottom()):
+
             if block.isVisible() and (bottom >= event.rect().top()):
                 number = str(blockNumber + 1)
-                #painter.setPen(Qt.black)
-                painter.setPen(Qt.darkGray)
+
+                if number == str(current_lineno):
+                    painter.setPen(Qt.black)
+                else:
+                    painter.setPen(Qt.darkGray)
+
                 painter.drawText(0, top,
                                  self.lineNumberArea.width()-3, height,
                                  Qt.AlignRight, number)
+                
+                
 
+                
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()

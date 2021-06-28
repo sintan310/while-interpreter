@@ -19,14 +19,17 @@ from PySide2.QtCore import (Qt, QSize,
                             QTextStream)
 from PySide2.QtGui import QFont, QIcon, QColor
 from PySide2.QtWidgets import (QWidget, QPushButton, 
-                               QTextEdit, QGridLayout, QVBoxLayout, QSplitter,
+                               QTextEdit, QGridLayout, QVBoxLayout, QHBoxLayout,
+                               QSplitter,
                                QMainWindow, QStatusBar,
                                QAction, QFontDialog, QMessageBox,
                                QApplication, QToolBar, QToolButton,
-                               QDockWidget, QStyle, QFrame, QFileDialog)
+                               QDockWidget, QStyle, QFrame, QFileDialog,
+                               QLineEdit, QLabel, QSpacerItem, QSizePolicy)
 
 from QCodeEditor import QCodeEditor
-from TableView import TableView
+from EnvViewer import EnvViewer
+from PresetEnv import PresetEnv
 from MyThread import MyThread
 
 CONFIG_FILE = 'config.ini'
@@ -42,60 +45,155 @@ os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
 class History:
     def __init__(self):
 
-        self.generation = 0
         self.history = []
-
-
-    def set_firstGeneration(self, elem):
-        self.generation = 1
-        self.history = []
-        self.history.append(elem)
 
         
     def set_elem(self, elem):
         self.history.append(elem)
-        self.generation += 1
+        
 
+    def set_elem_as_the1st(self, elem):
+        self.history = []
+        self.set_elem(copy.deepcopy(elem))
 
         
-    def get_elem(self, generation=None):
-        if generation == None:
-            generation = self.generation
+    def get_elem(self, relative=0):
+        length = len(self.history)
+        try:
+            retval = self.history[length - 1 + relative]
+        except:
+            retval = {}
+            
+        return retval
 
-                   
-        return self.history[generation-1]
-
-    def get_elem_previous(self, generation=None):
-        if generation == None:
-            generation = self.generation
-
-        return self.history[generation-2]
 
             
-    def is_theFirstGeneration(self):
-        if self.generation > 1:
-            return False
-        else:
-            return True
-        
-    def is_theLatestGeneration(self):
-        if self.generation == len(self.history):
+    def can_rewind(self):
+        if len(self.history) > 1:
             return True
         else:
             return False
+                
+    def discard_thelatest(self):
+        self.history.pop()
         
-    def change_generation_next(self):
-        self.generation += 1
-
-        
-    def change_generation_previous(self):
-        self.generation -= 1
-        
-    def init_generation(self):
-        # 0世代
-        self.generation = 0
         
 #---------------------------------------------------------------------------
+class FindWidget(QWidget):
+    def __init__(self, find_action, parent=None):
+        super().__init__(parent)
+        
+        self.find_action = find_action
+        self.setup_Ui()
+
+        self.find_word = ""
+        
+    
+    def setup_Ui(self):
+
+        layout = QGridLayout()
+        #layout.setSpacing(0)
+        #layout.setContentsMargins(0,0,0,0)
+
+        current_font = self.font()
+        current_font.setPointSize(11)
+        
+        self.setStyleSheet('border:0px;')
+        
+        self.label = QLabel("検索")
+        
+        self.lineEdit = QLineEdit()
+        self.lineEdit.textChanged.connect(self.find_text)        
+        self.lineEdit.setPlaceholderText("検索する語を入力...")
+        self.lineEdit.setClearButtonEnabled(True)
+        
+        self.lineEdit.setFont(current_font)
+        
+        self.lineEdit.setStyleSheet('''
+        QLineEdit:focus {
+          border: 1px solid lightblue;
+        }
+        QLineEdit {
+          padding:3px;
+          border: 1px solid lightGray;
+        }
+        ''')
+        
+        button_style = '''
+        QPushButton:hover{
+         border: 3px solid lightgray;
+        }
+        QPushButton:pressed{
+         border-top: 1px solid gray;
+         border-left: 1px solid gray;
+         border-bottom: 1px solid gray;
+         border-right: 1px solid gray;
+         background: gray;
+        }
+        '''
+        self.quitButton = QPushButton()
+        self.quitButton.setStyleSheet(button_style)        
+        self.quitButton.setIcon(self.style().standardIcon(QStyle.SP_DockWidgetCloseButton))
+        self.quitButton.clicked.connect(self.suspend)
+        self.quitButton.setCheckable(False)  
+        
+
+        self.nextButton = QPushButton()
+        self.nextButton.setStyleSheet(button_style)
+        self.nextButton.setIcon(self.style().standardIcon(QStyle.SP_TitleBarUnshadeButton))
+        self.nextButton.clicked.connect(self.find_next)
+        self.nextButton.setCheckable(False)  
+        
+        self.previousButton = QPushButton()
+        self.previousButton.setStyleSheet(button_style)
+        self.previousButton.setIcon(self.style().standardIcon(QStyle.SP_TitleBarShadeButton))
+        self.previousButton.clicked.connect(self.find_previous)
+        self.previousButton.setCheckable(False)  
+        
+        #spacer = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacer = QSpacerItem(10, 1)
+        
+        layout.addWidget(self.label, 0, 0)
+        layout.addWidget(self.lineEdit, 0, 1)
+        layout.addWidget(self.previousButton, 0, 3)
+        layout.addWidget(self.nextButton, 0, 4)
+        layout.addItem(spacer, 0, 5)
+        layout.addWidget(self.quitButton, 0, 6)
+
+        self.setLayout(layout)
+
+
+    def find_text(self, text, addpos=0, initflag=True):
+        self.find_word = text
+        self.find_action(self.find_word, addpos, initflag)
+
+
+    def find_next(self, text):
+        self.find_action(self.find_word, addpos=1, initflag=False)
+
+    def find_previous(self, text):
+        self.find_action(self.find_word, addpos=-1, initflag=False)
+
+        
+    def suspend(self):
+        self.find_action("")
+        self.setVisible(False)
+
+    def close(self):
+        self.find_word = ""
+        self.suspend()
+
+        
+    def open(self):
+        self.setVisible(True)
+        self.lineEdit.setText(self.find_word)
+        self.lineEdit.setFocus()
+        self.find_text(self.find_word)
+
+
+
+
+        
 class CentralWidget(QWidget):
     
     def __init__(self, parent=None):
@@ -112,7 +210,21 @@ class CentralWidget(QWidget):
 
         self.editor = QCodeEditor()        
         self.editor.setUndoRedoEnabled(True)
-        self.editor.setStyleSheet("border:0px")
+        self.editor.setStyleSheet('border:0px')
+        self.editor.verticalScrollBar().setStyleSheet('''
+        QScrollBar:vertical{
+         background: white;
+         width: 15px;
+         height: 50px;
+         }
+        QScrollBar::handle:vertical{
+         background: lightgray;
+         min-height: 100;
+        }
+        QScrollBar::handle:vertical:hover{
+         background: gray;
+        }
+        ''')
         
         
         # 実行結果の表示用
@@ -124,6 +236,13 @@ class CentralWidget(QWidget):
 
         rowHeight = self.fontMetrics().lineSpacing()
         self.messageArea.setMinimumHeight(rowHeight * 1)
+
+
+        # 検索用
+        self.findField = FindWidget(self.editor.set_find_word)
+        self.editor.myclicked.connect(self.findField.suspend)
+        self.findField.setVisible(False)
+        
         
         # メイン画面に部品を配置する
         layout = QGridLayout()
@@ -141,7 +260,8 @@ class CentralWidget(QWidget):
         self.splitter.setStretchFactor(0,3)
         self.splitter.setStretchFactor(1,1)
         self.splitter.setChildrenCollapsible(False)
-        
+
+        layout.addWidget(self.findField)
         layout.addWidget(self.splitter)
         
         self.setLayout(layout)
@@ -185,7 +305,7 @@ class CentralWidget(QWidget):
     def set_tabStop(self, tabStop):
         self.editor.tabStop = tabStop
 
-    
+
 
 #---------------------------------------------------------------------------
 class MainWindow(QMainWindow):
@@ -221,9 +341,13 @@ class MainWindow(QMainWindow):
 
         # ドック
         self.setup_Dock()
+        self.setup_Dock_preset()
+
+        #self.presetDock.sizeHint()
+        #self.presetDock.adjustSize()
+        #self.presetDock.resize(self.presetDock.minimumSizeHint())
 
         
-
         # main 関数で focus をもらうため（すべて表示し終わった main 内で実行させる）
         self.focusWidget = self.centralWidget.editor
         
@@ -241,10 +365,6 @@ class MainWindow(QMainWindow):
         self.thread.stopped_value.connect(self.eval_finished)
         self.thread.message_value.connect(self.centralWidget.add_messages)
 
-        
-        # タブスペース
-        self.tabStop = 4
-        self.centralWidget.set_tabStop(self.tabStop)
         
         
         # Settings 処理
@@ -290,13 +410,92 @@ class MainWindow(QMainWindow):
     # -----------------------------------------------------------------
     # ドック関連
     # -----------------------------------------------------------------
+    def setup_Dock_preset(self):
+        self.presetEnv = PresetEnv()
+        self.presetEnv.selectionModel.selectionChanged.connect(self.enable_removeItemButton)
+
+        # ボタン群レイアウト
+        #layout = QGridLayout()
+        layout = QHBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0,0,0,0)
+
+        font = self.font()
+        font.setPointSize(12)
+        font.setBold(True)
+        
+        self.addItemButton = QPushButton("+")
+        self.addItemButton.clicked.connect(self.presetEnv.newItem)
+        self.addItemButton.setCheckable(False)  
+        self.addItemButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.addItemButton.setStyleSheet("QPushButton {margin:0; padding: 3px 10px 3px 10px;}")
+        self.addItemButton.setFont(font)
+        
+        self.removeItemButton = QPushButton("-")
+        self.removeItemButton.clicked.connect(self.presetEnv.removeItems)
+        self.removeItemButton.setCheckable(False)  
+        self.removeItemButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.removeItemButton.setStyleSheet("QPushButton {margin:0; padding: 3px 10px 3px 10px;}")
+        self.removeItemButton.setFont(font)
+        self.removeItemButton.setEnabled(False)
+
+        
+        layout.addWidget(self.addItemButton)
+        layout.addWidget(self.removeItemButton)
+        layout.addStretch()
+
+        buttonsWidget = QWidget()
+        buttonsWidget.setLayout(layout)
+        buttonsWidget.setContentsMargins(0,0,0,0)
+        
+        # layoutV に、ボタン群 widget と self.tableView を縦方向に追加
+        layoutV = QVBoxLayout()
+        layoutV.setSpacing(0)
+        layoutV.setContentsMargins(0,0,0,0)
+        layoutV.addWidget(buttonsWidget)        
+        layoutV.addWidget(self.presetEnv)
+        
+        presetWidget = QWidget()
+        presetWidget.setLayout(layoutV)
+        presetWidget.setContentsMargins(0,0,0,0)
+
+        # Dock の作成
+        self.presetDock = QDockWidget('変数の初期値', self)        
+        self.presetDock.setObjectName("preset-dock")        
+        self.presetDock.setWidget(presetWidget)        
+        self.presetDock.setContentsMargins(0,0,0,0)
+
+        rowHeight = self.fontMetrics().lineSpacing()
+        #self.presetDock.setMaximumHeight(rowHeight * 15)
+        self.presetDock.setMinimumHeight(rowHeight * 15)
+        
+        
+        self.presetDock.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.presetDock)
+
+        # https://forum.qt.io/topic/94473/qdockwidget-resize-issue/16
+        # なぜかこれで最小サイズになる（最後のメッセージ欄を参照）
+        self.resizeDocks([self.presetDock], [1], Qt.Vertical)
+
+        self.presetDock.installEventFilter(self)        
+
+        
+
+    def enable_removeItemButton(self, selected, deselected):
+        if len(selected) > 0:
+            self.removeItemButton.setEnabled(True)
+        else:
+            self.removeItemButton.setEnabled(False)
+        
+        
     def setup_Dock(self):
         # 環境表示用
-        self.tableView = TableView()
+        self.envViewer = EnvViewer()
 
 
         # ボタン群レイアウト
-        layout = QGridLayout()
+        #layout = QGridLayout()
+        layout = QHBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(0,0,0,0)
         
@@ -304,49 +503,66 @@ class MainWindow(QMainWindow):
         self.startDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.startDebugButton.clicked.connect(self.prepare_debug_mode)
         self.startDebugButton.setCheckable(False)  
+        self.startDebugButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.startDebugButton.setStyleSheet("QPushButton {margin:0; padding: 3px 15px 3px 15px;}")
+
         
         self.stopDebugButton = QPushButton()
         self.stopDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
         self.stopDebugButton.setEnabled(False)
         self.stopDebugButton.setCheckable(False)  
         self.stopDebugButton.clicked.connect(self.stop_debug)
+        self.stopDebugButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.stopDebugButton.setStyleSheet("QPushButton {margin:0; padding: 3px 15px 3px 15px;}")
 
+        
         self.rewindDebugButton = QPushButton()
         self.rewindDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekBackward))
         self.rewindDebugButton.clicked.connect(self.rewind_program)
         self.rewindDebugButton.setEnabled(False)
         self.rewindDebugButton.setCheckable(False)  
+        self.rewindDebugButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.rewindDebugButton.setStyleSheet("QPushButton {margin:0; padding: 3px 15px 3px 15px;}")
         
         self.onestepDebugButton = QPushButton()
         self.onestepDebugButton.setIcon(self.style().standardIcon(QStyle.SP_MediaSeekForward))
         self.onestepDebugButton.clicked.connect(self.run_program_onestep)
         self.onestepDebugButton.setEnabled(False)
         self.onestepDebugButton.setCheckable(False)  
+        self.onestepDebugButton.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.onestepDebugButton.setStyleSheet("QPushButton {margin:0; padding: 3px 15px 3px 15px;}")
 
 
         line = QFrame(self)
         line.setFrameShape(QFrame.VLine)
         line.setFrameShadow(QFrame.Plain)
  
-        
+        """
         layout.addWidget(self.startDebugButton,0,0)
         layout.addWidget(self.stopDebugButton,0,1)
         layout.addWidget(line,0,2)        
         layout.addWidget(self.rewindDebugButton,0,3)
         layout.addWidget(self.onestepDebugButton,0,4)
-
+        """
+        layout.addWidget(self.startDebugButton)
+        layout.addWidget(self.stopDebugButton)
+        layout.addWidget(line)
+        layout.addWidget(self.rewindDebugButton)
+        layout.addWidget(self.onestepDebugButton)
+        layout.addStretch()
+        
         # ボタン群レイアウト layout を widget として扱えるようにする
         buttonsWidget = QWidget()
         buttonsWidget.setLayout(layout)
         buttonsWidget.setContentsMargins(0,0,0,0)
 
 
-        # layoutV に、ボタン群 widget と self.tableView を縦方向に追加
+        # layoutV に、ボタン群 widget と self.envViewer を縦方向に追加
         layoutV = QVBoxLayout()
         layoutV.setSpacing(0)
         layoutV.setContentsMargins(0,0,0,0)
         layoutV.addWidget(buttonsWidget)        
-        layoutV.addWidget(self.tableView)
+        layoutV.addWidget(self.envViewer)
         
         debugWidget = QWidget()
         debugWidget.setLayout(layoutV)
@@ -375,6 +591,10 @@ class MainWindow(QMainWindow):
             self.debugDock.hide()
         """
         self.debugDock.setVisible(self.debugDockAct.isChecked())
+
+    def show_presetDock(self):
+        self.presetDock.setVisible(self.presetDockAct.isChecked())
+        
         
     def eventFilter(self, source, event):
         if (event.type() == QEvent.Close and \
@@ -383,9 +603,11 @@ class MainWindow(QMainWindow):
             
             #print(source.windowTitle())
             #print(source.objectName())
+            if source.objectName() == self.debugDock.objectName():
+                self.debugDockAct.setChecked(False)
+            elif source.objectName() == self.presetDock.objectName():
+                self.presetDockAct.setChecked(False)
 
-            self.debugDockAct.setChecked(False)
-            
             
         return super().eventFilter(source, event)
 
@@ -509,6 +731,18 @@ class MainWindow(QMainWindow):
                                        statusTip="すべての行を選択します",
                                        triggered=self.centralWidget.editor.selectAll)
         self.editMenu.addAction(self.selectAllAction)
+
+        
+        # ---
+        self.editMenu.addSeparator()
+        # ---
+
+        self.selectAllAction = QAction("検索",self,
+                                       shortcut="Ctrl+F",
+                                       statusTip="検索",
+                                       triggered=self.centralWidget.findField.open)
+        self.editMenu.addAction(self.selectAllAction)
+
         
         """
     self.copyAction = QtGui.QAction(QtGui.QIcon("icons/copy.png"),"Copy to clipboard",self)
@@ -573,6 +807,16 @@ class MainWindow(QMainWindow):
         subDebugMenu.addAction(self.debugTrailAct)
         self.debug_tail = True         # animation 用フラグ
 
+        
+        self.visualMenu.addSeparator()
+        subPresetMenu = self.visualMenu.addMenu('変数の初期値')
+        self.presetDockAct = QAction('ドッグの表示', self,
+                                         statusTip='ドッグの表示',
+                                         triggered=self.show_presetDock)        
+        self.presetDockAct.setObjectName("presetDock_enabled")        
+        self.presetDockAct.setCheckable(True)
+        self.presetDockAct.setChecked(True)
+        subPresetMenu.addAction(self.presetDockAct)
         
         self.visualMenu.addSeparator()
         
@@ -675,9 +919,13 @@ class MainWindow(QMainWindow):
             #self.centralWidget.editor.moveCursor(self.cursor.End)
         
             # デバッグの tableView と実行結果をクリア
-            self.tableView.set_data({})
+            self.envViewer.set_data({})
             self.centralWidget.clear_messages()
 
+            # 検索フィールドを閉じておく
+            self.centralWidget.findField.close()
+
+            
     
     def open_file(self, path=None):
         if self.maybeSave():
@@ -711,11 +959,14 @@ class MainWindow(QMainWindow):
                     self.fname = QFileInfo(path).fileName()                
                     self.set_window_title(self.fname_with_path)
 
+                    # 検索フィールドを閉じておく
+                    self.centralWidget.findField.close()
+
                     # デバッグモードは終了しておく
                     self.stop_debug()
 
                     # デバッグの tableView と実行結果をクリア
-                    self.tableView.set_data({})
+                    self.envViewer.set_data({})
                     self.centralWidget.clear_messages()
                     
                     # 変更あり情報（modified）をクリア
@@ -864,13 +1115,18 @@ class MainWindow(QMainWindow):
         self.stopDebugButton.setEnabled(False)
         self.startDebugButton.setEnabled(True)
         self.onestepDebugButton.setEnabled(False)
-
+        
+        self.presetEnv.set_ReadOnly(False)
+        self.presetEnv.setEnabled(True)
+        self.addItemButton.setEnabled(True)
+        
         self.enable_startButton()
         
         self.centralWidget.set_ReadOnly(False)
         self.centralWidget.clear_HighlightLine()
-        self.tableView.set_data({})
+        self.envViewer.set_data({})
 
+        self.focusWidget.setFocus()
         
         if self.thread.isRunning():
             self.thread.terminate()
@@ -881,12 +1137,21 @@ class MainWindow(QMainWindow):
         
     def prepare_debug_mode(self):        
         textboxValue = self.centralWidget.get_program()        
-        first_executable_lineno = self.thread.setup(textboxValue)
+
+        preset_env = self.presetEnv.get_data()
         
-        if self.thread.evaluatorInfo['noerror']:
-            self.tableView.set_data({})
+        evaluatorInfo = self.thread.setup(textboxValue, preset_env)
+        first_executable_lineno = evaluatorInfo['lineno']
+        
+        if evaluatorInfo['noerror']:
             self.centralWidget.clear_messages()
+
+            # history に追加
+            self.history.set_elem_as_the1st(evaluatorInfo)
+            self.envViewer.set_data(evaluatorInfo['pretty_env'])
+
             
+            # ボタン連動
             self.startDebugButton.setEnabled(False)
             self.stopDebugButton.setEnabled(True)
             self.onestepDebugButton.setEnabled(True)
@@ -894,84 +1159,82 @@ class MainWindow(QMainWindow):
             self.startButton.setEnabled(False)
             self.startProgramAct.setEnabled(True)
             
+            self.presetEnv.clearSelection()
+            self.presetEnv.set_ReadOnly(True)
+            self.presetEnv.setEnabled(False)
+            self.addItemButton.setEnabled(False)
+
+            # 次に実行する行をハイライト
             self.centralWidget.set_HighlightLine(first_executable_lineno,
                                                  self.debug_trail)
             self.centralWidget.set_ReadOnly(True)
-
-            self.history.set_firstGeneration({'env':{},
-                                              'lineno':first_executable_lineno})
             
             # oneStep 実行を有効化
             self.thread.oneStep = True
 
 
     def rewind_program(self):
-
+        # ボタン連動：「>>」を有効に
         self.onestepDebugButton.setEnabled(True)
-                
-        self.history.change_generation_previous()
-        
+
+        # 一つ前の実行結果を取得
+        self.history.discard_thelatest()        
         current = self.history.get_elem()
+        
         self.centralWidget.set_HighlightLine(current['lineno'],
                                              self.debug_trail)
         
-        if self.history.is_theFirstGeneration():
-
-            # self.history.init_generation()
-            self.tableView.set_data({})
+        if not self.history.can_rewind():
+            # 巻き戻せない            
+            self.envViewer.set_data(current['pretty_env'], previous={})
             self.rewindDebugButton.setEnabled(False)
             
             
         else:
-            previous = self.history.get_elem_previous()
-            self.tableView.set_data(current['env'], previous['env'])
+            previous = self.history.get_elem(-1)
+            self.envViewer.set_data(current['pretty_env'],
+                                    previous['pretty_env'])
 
     
 
     def run_program_onestep(self):
-        
-        if self.history.is_theLatestGeneration():
-            self.startDebugButton.setEnabled(False)
-            self.rewindDebugButton.setEnabled(True)
-            self.thread.start()
+        self.startDebugButton.setEnabled(False)
+        self.rewindDebugButton.setEnabled(True)
 
-        else:
-            self.history.change_generation_next()
-            current = self.history.get_elem()
-            self.tableView.set_data(current['env'])
-            
-            self.centralWidget.set_HighlightLine(current['lineno'],
-                                                 self.debug_trail)
-            
-            if self.history.is_theLatestGeneration():
-                if current['lineno'] == 0:
-                
-                    # 最終世代だったら 
-                    self.onestepDebugButton.setEnabled(False)
-                    self.rewindDebugButton.setEnabled(True)
-            
-                else:                    
-                    self.onestepDebugButton.setEnabled(True)
-                    self.rewindDebugButton.setEnabled(True)
+        current = self.history.get_elem()
         
-            
-
+        evalInfo = copy.deepcopy(current)
+        self.thread.set_env(evalInfo)
+        
+        #self.envViewer.set_data(current['pretty_env'])
+        
+        self.thread.start()
+        return
+    
 
         
     def run_program(self):
         self.centralWidget.clear_messages()
+
+        preset_env = self.presetEnv.get_data()
+        
         
         program = self.centralWidget.get_program()
-        self.thread.setup(program)
+        self.thread.setup(program, preset_env)
         
         if self.thread.evaluatorInfo['noerror']:
             self.stop_debug()
 
-            self.centralWidget.set_ReadOnly(False)
-
+            self.centralWidget.set_ReadOnly(True)
+            
+            self.presetEnv.clearSelection()
+            self.presetEnv.set_ReadOnly(True)
+            self.presetEnv.setEnabled(False)
+            self.addItemButton.setEnabled(False)
+            
             self.disable_startButton()
             self.onestepDebugButton.setEnabled(False)
-
+            
             self.centralWidget.clear_HighlightLine()
 
             self.thread.oneStep = False
@@ -996,33 +1259,28 @@ class MainWindow(QMainWindow):
 
         evaluatorInfo = self.thread.evaluatorInfo
         try:
-            self.tableView.set_data(evaluatorInfo['env'])
+            self.envViewer.set_data(evaluatorInfo['pretty_env'])
             
         except:
-            self.tableView.set_data({})
+            self.envViewer.set_data({})
 
             
         if self.thread.oneStep == False:
             # 通常実行
             self.enable_startButton()
-
         else:
             # oneStep 実行
 
             # history に追加
-            self.history.set_elem({'env':copy.deepcopy(evaluatorInfo['env']),
-                                   'lineno':evaluatorInfo['lineno']})
-
-
+            self.history.set_elem(evaluatorInfo)
+            
             
             if evaluatorInfo['empty']:
                 # もう実行するものがない場合
 
-                #self.startDebugButton.setEnabled(True)
+                # ボタン連動：「>>」を無効に
                 self.onestepDebugButton.setEnabled(False)
-                #self.stopDebugButton.setEnabled(False)
-
-                #self.centralWidget.set_ReadOnly(False)
+                
                 self.centralWidget.clear_HighlightLine()
                 QMessageBox.information(self,
                                         "プログラム実行の終了",
@@ -1030,7 +1288,6 @@ class MainWindow(QMainWindow):
                                         QMessageBox.Ok)
 
             else:
-                # self.startDebugButton.setEnabled(True)
                 self.centralWidget.set_HighlightLine(evaluatorInfo['lineno'],
                                                      self.debug_trail)
             
@@ -1048,7 +1305,12 @@ class MainWindow(QMainWindow):
         self.stopProgramAct.setEnabled(False)
                 
         self.centralWidget.set_ReadOnly(False)
-        self.centralWidget.editor.highlightCurrentLine()
+        
+        self.presetEnv.set_ReadOnly(False)
+        self.presetEnv.setEnabled(True)
+        self.addItemButton.setEnabled(True)
+        
+        #self.centralWidget.editor.highlightCurrentLine()
         
 
     def disable_startButton(self):
@@ -1060,7 +1322,11 @@ class MainWindow(QMainWindow):
         
         self.centralWidget.set_ReadOnly(True)
 
-
+        self.presetEnv.clearSelection()
+        self.presetEnv.set_ReadOnly(True)
+        self.presetEnv.setEnabled(False)
+        self.addItemButton.setEnabled(False)
+        
 
     # -----------------------------------------------------------------
     # キー入力時のショートカット
@@ -1136,10 +1402,12 @@ class MainWindow(QMainWindow):
     def loadSettings(self):
         # https://fereria.github.io/reincarnation_tech/11_PySide/01_PySide_Basic/00_Tutorial/09_qsettings/
         
+        
         if not os.path.exists(CONFIG_FILE): # ファイル存在判定
             self.initSettings()
             return
-            
+
+        
         setting = QSettings(CONFIG_FILE, QSettings.IniFormat)
 
         # splitter の位置を復帰        
@@ -1158,13 +1426,14 @@ class MainWindow(QMainWindow):
             font = QFont(font_family, font_size, font_weight)
             self.update_font(font)
         except:
-            pass
+            print("Error: There is an error to make information about font.")
+            #pass
         
         # tableview の第1列の幅
         width = setting.value("tableview_column_width")
-        self.tableView.set_HeaddaColumnWidth(int(width))
+        self.envViewer.set_HeaddaColumnWidth(int(width))
 
-        # メニュー->デバッグ->ドッグの表示 のチェック
+        # メニュー->表示->デバッグ のチェック
         checked = self.str_to_bool(setting.value(self.debugDockAct.objectName()))
         self.debugDockAct.setChecked(checked)
         self.show_Dock()
@@ -1173,6 +1442,14 @@ class MainWindow(QMainWindow):
         checked = self.str_to_bool(setting.value(self.debugTrailAct.objectName()))
         self.debugTrailAct.setChecked(checked)
         self.debug_trail = checked
+
+
+        # メニュー->表示->変数の初期値 のチェック
+        checked = self.str_to_bool(setting.value(self.presetDockAct.objectName()))
+        self.presetDockAct.setChecked(checked)
+        self.show_presetDock()
+
+
 
         
         checked = self.str_to_bool(setting.value(self.toolBarVisibleAct.objectName()))
@@ -1208,7 +1485,7 @@ class MainWindow(QMainWindow):
         setting.setValue("font_weight", font_weight)
 
         # tableview の第1列の幅
-        width = self.tableView.get_HeaddaColumnWidth()
+        width = self.envViewer.get_HeaddaColumnWidth()
         setting.setValue("tableview_column_width", width)
 
         # メニュー->ツール->デバッグ表示 のチェック
@@ -1219,6 +1496,9 @@ class MainWindow(QMainWindow):
         setting.setValue(self.toolBarVisibleAct.objectName(),
                          self.toolBarVisibleAct.isChecked())
 
+        setting.setValue(self.presetDockAct.objectName(),
+                         self.presetDockAct.isChecked())
+        
         
         #program = self.centralWidget.get_program()
         #setting.setValue("program", program)
@@ -1228,9 +1508,11 @@ class MainWindow(QMainWindow):
     def update_font(self, font):
         self.centralWidget.editor.setFont(font)
         self.centralWidget.messageArea.setFont(font)
-        self.tableView.set_font(font)
+        self.envViewer.set_font(font)
+        self.presetEnv.set_font(font)
+        self.centralWidget.setFont(font)
+        
 
-        # self.centralWidget.editor.setTabStopWidth(self.centralWidget.editor.fontMetrics().horizontalAdvance(" ") * self.tabStop)
         
 
     def select_font(self):

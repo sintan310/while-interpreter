@@ -214,7 +214,7 @@ precedence = (
 #    ('nonassoc', 'IFX','ELSE'),
     )
 
-start = 'statement'
+#start = 'statement'
 def p_statement(t):
     '''statement : NAME SUBST expression
                  | NAME array_nest SUBST expression
@@ -485,6 +485,7 @@ def p_expression_name(t):
     
 
 
+    
 
     
 """        
@@ -510,7 +511,7 @@ def p_error(t):
 
 
 import ply.yacc as yacc
-parser = yacc.yacc(write_tables=False, debug=False)
+parser = yacc.yacc(start='statement', write_tables=False, debug=False)
 #parser = yacc.yacc(debug=True)
 
 # ----------------------------------------------------------------
@@ -526,6 +527,9 @@ class Stack:
     def __init__(self, name=""):
         self.stack = []
         self.name = name
+
+    def __str__(self):
+        return self.name+"(%d)" % len(self.stack)
         
     def clear(self):
         self.stack = []
@@ -595,6 +599,17 @@ class Evaluator:
         self.onestep_lineno = 0
    
 
+    def set_env(self, param):
+        self.env = param['env']
+        try:
+            self.task = param['task']
+            self.values = param['values']
+            self.dump = param['dump']
+            self.nameref = param['nameref']
+        except:
+            pass
+
+        
     def clear_stack(self):        
         self.task.clear()
         self.values.clear()
@@ -1442,7 +1457,7 @@ class Evaluator:
     # -------------------------------------------------
     # public 
     # -------------------------------------------------
-    def setup(self, s):
+    def setup(self, s, env=[]):
         """
         evaluator for GUI mode
         """
@@ -1457,6 +1472,20 @@ class Evaluator:
 
         self.clear_stack()
 
+        if env != []:
+            node_list = []
+            for aline in env[::-1]:
+                sentence = aline[0] + ":=" + aline[1]
+                aNode = parser.parse(sentence)
+                self.task.push(Task(aNode, cnt=1))
+                print(sentence)
+
+            while not self.task.is_empty():            
+                task = self.task.pop()
+                self.eval_sentence(task)
+        
+
+            
         
         ss = s.split('\n')
 
@@ -1584,7 +1613,14 @@ class Evaluator:
                 
         # エラーがある場合にはセットアップ終了
         if error_num >0:
-            return False
+            return {'noerror': False,
+                    'lineno': self.onestep_lineno,
+                    'env':self.env, 
+                    'pretty_env': self.pretty_env(self.env),
+                    'task': self.task,
+                    'values': self.values,
+                    'dump': self.dump,
+                    'nameref': self.name_ref}
         
         # はじめに実行される行番号を取得しておく
         if len(node_list) > 0:
@@ -1593,13 +1629,25 @@ class Evaluator:
         # 逆順にスタックへ積む
         for node in node_list[::-1]:
             self.task.push(Task(node, cnt=1))
-
-        return True
+            
+        return {'noerror': True,
+                'lineno': self.onestep_lineno,
+                'env':self.env, 
+                'pretty_env': self.pretty_env(self.env),
+                'task': self.task,
+                'values': self.values,
+                'dump': self.dump,
+                'nameref': self.name_ref}
             
 
     def eval_onestep(self):
         if self.task.is_empty():
-            return {'lineno':0, 'env':{}, 'empty':True}
+            return {'lineno':0, 'env':{}, 'empty':True,
+                    'pretty_env': {},
+                    'task': self.task,
+                    'values': self.values,
+                    'dump': self.dump,
+                    'nameref': self.name_ref}
 
         #print("---")        
         while True:
@@ -1629,8 +1677,13 @@ class Evaluator:
                 # empty なら終了
                 
                 return {'lineno':0,
-                        'env':self.pretty_env(self.env),
-                        'empty':True}
+                        'env': self.env,
+                        'pretty_env': self.pretty_env(self.env),
+                        'empty': True,
+                        'task': self.task,
+                        'values': self.values,
+                        'dump': self.dump,
+                        'nameref': self.name_ref}
 
             
             if self.onestep_lineno == 0:
@@ -1647,8 +1700,13 @@ class Evaluator:
             
         
         return {'lineno':self.onestep_lineno,
-                'env':self.pretty_env(self.env),
-                'empty':self.task.is_empty()}
+                'env': self.env,
+                'pretty_env': self.pretty_env(self.env),
+                'empty':self.task.is_empty(),
+                'task': self.task,
+                'values': self.values,
+                'dump': self.dump,
+                'nameref': self.name_ref}
         
 
         
@@ -1661,7 +1719,11 @@ class Evaluator:
             self.eval_sentence(task)
 
     
-        return self.pretty_env(self.env)
+        return {
+            'lineno': self.onestep_lineno,
+            'env':self.env, 
+            'pretty_env': self.pretty_env(self.env),
+        }
 
 
 

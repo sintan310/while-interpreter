@@ -176,8 +176,9 @@ class FindWidget(QWidget):
 
         
     def suspend(self):
-        self.find_action("")
-        self.setVisible(False)
+        if not self.isHidden():
+            self.find_action("")
+            self.setVisible(False)
 
     def close(self):
         self.find_word = ""

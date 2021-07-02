@@ -2,7 +2,7 @@
 from PySide2.QtGui import QFont
 from PySide2.QtCore import (Qt, QModelIndex, QAbstractTableModel)
 from PySide2.QtWidgets import (QApplication, QMainWindow, QVBoxLayout,
-                               QWidget, QTableView, QHeaderView)
+                               QWidget, QTableView, QHeaderView, QAction, QMenu)
 
 import re
 
@@ -144,8 +144,9 @@ class PresetEnv(QWidget):
         self.hheader.setStretchLastSection(True)        
         self.table.setHorizontalHeader(self.hheader)        
 
-
-
+        self.table.setContextMenuPolicy(Qt.ActionsContextMenu)
+        
+        
         
     def newItem(self):
         self.model.addRow("","")
@@ -184,5 +185,19 @@ class PresetEnv(QWidget):
         self.model.readonly = flag
         
     def clearSelection(self):
+        # 選択の解除
         self.selectionModel.clearSelection()
+
+        
+        
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        deleteAction = menu.addAction("選択行の削除")
+        
+        action = menu.exec_(self.mapToGlobal(event.pos()))
+        index = self.table.indexAt(event.pos())
+        if action == deleteAction:
+            self.removeItems()
+
+
         

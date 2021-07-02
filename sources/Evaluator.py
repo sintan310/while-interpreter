@@ -696,6 +696,7 @@ class Evaluator:
                         
                     self.env[var_name] = target_value
 
+                    """
                     # refname 処理
                     if not self.name_ref.is_empty():
                         refnames = self.name_ref.top()
@@ -704,9 +705,10 @@ class Evaluator:
                             ref = refnames[var_name]                            
                             stacked_env = self.dump.top()
                             stacked_env[ref] = target_value
-                        
+                    """
                     
                     return
+                
             else:
                 if cnt==2:
                     #print(aNode.toStr())
@@ -915,7 +917,10 @@ class Evaluator:
                 call_params = aNode.children[2]
                 orig_env = self.dump.pop()
 
-                self.name_ref.pop()
+                refnames = self.name_ref.pop()
+                for proc_arg, call_name in refnames.items():
+                    orig_env[call_name] = self.env[proc_arg]
+                
                 
                 try:
                     retval = self.env[procedure_retname]

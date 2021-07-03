@@ -80,21 +80,26 @@ class History:
         
 #---------------------------------------------------------------------------
 class FindWidget(QWidget):
-    def __init__(self, find_action, parent=None):
+    def __init__(self, editor, find_action, replace_action, parent=None):
         super().__init__(parent)
-        
+
+        self.editor = editor
         self.find_action = find_action
+        self.replace_action = replace_action
+        self.mode = "find" # or "replace"
         self.setup_Ui()
 
         self.find_word = ""
+        self.replace_word = ""
         
     
     def setup_Ui(self):
 
-        layout = QGridLayout()
+        layoutFind = QGridLayout()
         #layout.setSpacing(0)
         #layout.setContentsMargins(0,0,0,0)
 
+        original_font = self.font()
         current_font = self.font()
         current_font.setPointSize(11)
         
@@ -104,12 +109,12 @@ class FindWidget(QWidget):
         
         self.lineEdit = QLineEdit()
         self.lineEdit.textChanged.connect(self.find_text)        
-        self.lineEdit.setPlaceholderText("検索する語を入力...")
+        self.lineEdit.setPlaceholderText("検索する語")
         self.lineEdit.setClearButtonEnabled(True)
         
         self.lineEdit.setFont(current_font)
-        
-        self.lineEdit.setStyleSheet('''
+
+        lineEdit_style = '''
         QLineEdit:focus {
           border: 1px solid lightblue;
         }
@@ -117,18 +122,25 @@ class FindWidget(QWidget):
           padding:3px;
           border: 1px solid lightGray;
         }
-        ''')
+        '''
+        self.lineEdit.setStyleSheet(lineEdit_style)
         
         button_style = '''
+        QPushButton {
+         padding: 4px;
+         color: #333333;
+         width: 2.5em;
+        }
         QPushButton:hover{
-         border: 3px solid lightgray;
+         border: 1px solid lightgray;
+         background: lightgray;
         }
         QPushButton:pressed{
          border-top: 1px solid gray;
          border-left: 1px solid gray;
-         border-bottom: 1px solid gray;
-         border-right: 1px solid gray;
-         background: gray;
+         border-bottom: 0px solid gray;
+         border-right: 0px solid gray;
+         background: none;
         }
         '''
         self.quitButton = QPushButton()
@@ -149,48 +161,165 @@ class FindWidget(QWidget):
         self.previousButton.setIcon(self.style().standardIcon(QStyle.SP_TitleBarShadeButton))
         self.previousButton.clicked.connect(self.find_previous)
         self.previousButton.setCheckable(False)  
+
         
         #spacer = QSpacerItem(1, 1, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        spacer = QSpacerItem(10, 1)
+        spacer = QSpacerItem(15, 1)
         
-        layout.addWidget(self.label, 0, 0)
-        layout.addWidget(self.lineEdit, 0, 1)
-        layout.addWidget(self.previousButton, 0, 3)
-        layout.addWidget(self.nextButton, 0, 4)
-        layout.addItem(spacer, 0, 5)
-        layout.addWidget(self.quitButton, 0, 6)
-
-        self.setLayout(layout)
+        layoutFind.addWidget(self.label, 0, 0)
+        layoutFind.addWidget(self.lineEdit, 0, 1)
+        layoutFind.addWidget(self.previousButton, 0, 3)
+        layoutFind.addWidget(self.nextButton, 0, 4)
+        layoutFind.addItem(spacer, 0, 5)
+        layoutFind.addWidget(self.quitButton, 0, 6)
 
 
-    def find_text(self, text, addpos=0, initflag=True):
+        self.labelReplace = QLabel("置換")
+        self.labelReplace.setFont(original_font)
+
+        self.lineEditReplace = QLineEdit()
+        self.lineEditReplace.textChanged.connect(self.set_replace_text)        
+        self.lineEditReplace.setPlaceholderText("置き換え後")
+        self.lineEditReplace.setClearButtonEnabled(True)        
+        self.lineEditReplace.setFont(current_font)
+        self.lineEditReplace.setStyleSheet(lineEdit_style)
+
+        replaceButton_style = '''
+        QPushButton {
+         padding: 4px;
+         color: #333333;
+         width: 2.5em;
+        }
+        QPushButton:hover{
+         border:1px solid lightgray;
+         background: lightgray;
+        }
+        QPushButton:pressed{
+         border-top: 1px solid gray;
+         border-left: 1px solid gray;
+         border-bottom: 0px solid gray;
+         border-right: 0px solid gray;
+         background: none;
+        }
+        QPushButton:disabled{
+         color: lightgray
+        }
+        '''
+
+        self.replaceAllButton = QPushButton("すべて")
+        self.replaceAllButton.setStyleSheet(replaceButton_style)        
+        self.replaceAllButton.setFont(original_font)
+        self.replaceAllButton.clicked.connect(self.replace_all)
+        self.replaceAllButton.setCheckable(False)  
+        self.replaceAllButton.setEnabled(False)        
+
+        self.replaceOneButton = QPushButton("置換")
+        self.replaceOneButton.setStyleSheet(replaceButton_style)        
+        self.replaceOneButton.setFont(original_font)
+        self.replaceOneButton.clicked.connect(self.replace_at)
+        self.replaceOneButton.setCheckable(False)  
+        self.replaceOneButton.setEnabled(False)        
+
+        
+        layoutFind.addWidget(self.labelReplace, 1, 0)
+        layoutFind.addWidget(self.lineEditReplace, 1, 1)
+        layoutFind.addWidget(self.replaceAllButton, 1, 3)
+        layoutFind.addWidget(self.replaceOneButton, 1, 4)
+
+        self.replaceWidgets = [self.labelReplace,
+                               self.lineEditReplace,
+                               self.replaceAllButton,
+                               self.replaceOneButton]
+        #for x in self.replaceWidgets: x.hide()
+        
+        
+        self.setLayout(layoutFind)
+
+
+    def find_text(self, text, addpos=0, keypos_clear=True):
         self.find_word = text
-        self.find_action(self.find_word, addpos, initflag)
+        self.find_action(self.find_word, addpos, keypos_clear)
 
+        if self.replace_word != "" and self.find_word != "":
+            self.replaceAllButton.setEnabled(True)
+            self.replaceOneButton.setEnabled(True)
+        else:
+            self.replaceAllButton.setEnabled(False)
+            self.replaceOneButton.setEnabled(False)
+
+        
 
     def find_next(self, text):
-        self.find_action(self.find_word, addpos=1, initflag=False)
+        self.find_action(self.find_word, addpos=1, keypos_clear=False)
 
     def find_previous(self, text):
-        self.find_action(self.find_word, addpos=-1, initflag=False)
+        self.find_action(self.find_word, addpos=-1, keypos_clear=False)
 
+
+    def set_replace_text(self, text):
+        self.replace_word = text
+        
+        if self.replace_word != "" and self.find_word != "":
+            self.replaceAllButton.setEnabled(True)
+            self.replaceOneButton.setEnabled(True)
+        else:
+            self.replaceAllButton.setEnabled(False)
+            self.replaceOneButton.setEnabled(False)
+
+
+    def replace_at(self):
+        if self.find_word != "" and self.replace_word != "":
+            self.replace_action(self.find_word, self.replace_word)
+        
+    def replace_all(self):
+        if self.find_word != "" and self.replace_word != "":
+            self.replace_action(self.find_word, self.replace_word,
+                                all_flag=True)
+        
         
     def suspend(self):
-        if not self.isHidden():
-            self.find_action("")
-            self.setVisible(False)
+        # この widget が有効でないときは何もしない
+        
+        if self.isVisible():
+            # widget が見えている時にクリックされた処理
+            
+            # 選択領域があるときには再検索
+            cursor = self.editor.textCursor()
+            selected_text = cursor.selectedText()
+            if selected_text != "":
+                self.open()
+                
+            else:
+                # 選択領域がないときには閉じる
+                self.find_action("")
+                self.setVisible(False)
+                
 
     def close(self):
         self.find_word = ""
         self.suspend()
 
         
-    def open(self):
+    def open(self, mode=None):
+        if mode != None:
+            self.mode = mode
+
         self.setVisible(True)
+        
+        cursor = self.editor.textCursor()
+        selected_text = cursor.selectedText()
+        if selected_text != "":
+            self.find_word = selected_text
+        
         self.lineEdit.setText(self.find_word)
         self.lineEdit.setFocus()
         self.find_text(self.find_word)
 
+        print(self.mode)
+        if self.mode == "find":
+            for x in self.replaceWidgets: x.hide()
+        else:
+            for x in self.replaceWidgets: x.show()
 
 
 
@@ -240,7 +369,9 @@ class CentralWidget(QWidget):
 
 
         # 検索用
-        self.findField = FindWidget(self.editor.set_find_word)
+        self.findField = FindWidget(self.editor,
+                                    self.editor.set_find_word,
+                                    self.editor.replace_word)
         self.editor.myclicked.connect(self.findField.suspend)
         self.findField.setVisible(False)
         
@@ -468,7 +599,7 @@ class MainWindow(QMainWindow):
 
         rowHeight = self.fontMetrics().lineSpacing()
         #self.presetDock.setMaximumHeight(rowHeight * 15)
-        self.presetDock.setMinimumHeight(rowHeight * 15)
+        self.presetDock.setMinimumHeight(rowHeight * 10)
         
         
         self.presetDock.setAllowedAreas(Qt.AllDockWidgetAreas)
@@ -738,12 +869,19 @@ class MainWindow(QMainWindow):
         self.editMenu.addSeparator()
         # ---
 
-        self.selectAllAction = QAction("検索",self,
-                                       shortcut="Ctrl+F",
-                                       statusTip="検索",
-                                       triggered=self.centralWidget.findField.open)
-        self.editMenu.addAction(self.selectAllAction)
+        self.findAction = QAction("検索",self,
+                                  shortcut="Ctrl+F",
+                                  statusTip="検索",
+                                  triggered=lambda :self.centralWidget.findField.open(mode="find"))
+        self.editMenu.addAction(self.findAction)
 
+        self.replaceAction = QAction("置換",self,
+                                  shortcut="Ctrl+H",
+                                  statusTip="置換",
+                                  triggered=lambda :self.centralWidget.findField.open(mode="replace"))
+        self.editMenu.addAction(self.replaceAction)
+
+        
         
         """
     self.copyAction = QtGui.QAction(QtGui.QIcon("icons/copy.png"),"Copy to clipboard",self)

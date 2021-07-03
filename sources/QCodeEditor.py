@@ -237,6 +237,8 @@ class QCodeEditor(QPlainTextEdit):
         # find word
         self.keypos = 0
         self.keyword = ""
+        self.find_index = -1
+        self.find_length = -1
 
         
     def mouseReleaseEvent(self, event):
@@ -559,35 +561,53 @@ class QCodeEditor(QPlainTextEdit):
 
 
 
-    def set_find_word(self, keyword, addpos=0, initflag=True):
+    def set_find_word(self, keyword, addpos=0, keypos_clear=True):
         # addpos
         # 1 or -1: self.keypos += addpos
+        # self.keypos は -1, 1,2,3,4,... という順番。
+        # -1 は「最終」match を意味する。
+        # 0 は unmatched とし、このときは matched が yellow で表示され、
+        # darkYellow で表示される keypos は存在しない。
         #
-        # initflag:
+        # keypos_clear:
         # True : 初期状態（self.keypos = 0）にし、カレントへ移動しない
         # False: self.keypos に従い、カレントも移動
+        #
+        # return: match した個数
         
         if keyword:
             self.findWordPattern = QRegExp(keyword)
+            self.length = len(keyword)
+            
         else:
+            # 初期化
             self.findWordPattern = None
             self.keypos = 0
+            self.length = -1
+            self.index = -1
 
             self.setExtraSelections([])
             cursor = self.textCursor()
             cursor.clearSelection()
             self.setTextCursor(cursor)                
             
-            return
+            return 0
+        
 
-        if initflag:
+        if keypos_clear:
             self.keypos = 0
+            
         else:
             if addpos > 0:
-                self.keypos += 1
-            else:
+                # カレントがない状態のときには keypos を 1 に
+                if self.keypos == 0:
+                    self.keypos = 1
+                else:
+                    self.keypos += 1
+                    
+            elif addpos < 0:
                 self.keypos -= 1
-                if self.keypos < 0:
+                if self.keypos < 1:
                     # -1 は最後の該当箇所という意味で使う
                     self.keypos = -1
 
@@ -629,32 +649,38 @@ class QCodeEditor(QPlainTextEdit):
 
 
             if matched_positions == []:
-                return
+                return len(matched_positions)
 
-            if initflag:
+            if keypos_clear or self.keypos == 0:
                 self.setExtraSelections(extraSelections)
-                return
+                return len(matched_positions)
 
             
             # 現在 match 場所のハイライト処理
             try:
-                if self.keypos >= 0:
-                    index = matched_positions[self.keypos]
+                if self.keypos > 0:
+                    self.index = matched_positions[self.keypos-1]
                     
                 else:
                     # 最後に match した場所
-                    self.keypos = len(matched_positions)-1
-                    index = matched_positions[self.keypos]
+                    self.keypos = len(matched_positions)
+                    self.index = matched_positions[self.keypos-1]
 
             except:
-                self.keypos = 0
-                index = matched_positions[self.keypos]
+                if len(matched_positions) >= 1:
+                    self.keypos = 1
+                    self.index = matched_positions[self.keypos-1]
+                else:
+                    self.keypos = 0
+                    self.setExtraSelections(extraSelections)
+                    return len(matched_positions)
+                    
 
                 
             selection = QTextEdit.ExtraSelection()
             selection.format.setBackground(QColor(Qt.darkYellow))
             selection.cursor = self.textCursor()
-            selection.cursor.setPosition(index)
+            selection.cursor.setPosition(self.index)
             selection.cursor.movePosition(QTextCursor.NextCharacter,
                                           QTextCursor.KeepAnchor, length)
             self.setTextCursor(selection.cursor)                
@@ -663,9 +689,36 @@ class QCodeEditor(QPlainTextEdit):
                 
 
             self.setExtraSelections(extraSelections)
-            
+            return len(matched_positions)
+
+
+        
+    def replace_word(self, find_word, replace_word, all_flag=False):
+        if all_flag:
+            oldtext = self.document().toPlainText()
+            newtext = oldtext.replace(find_word, replace_word)
+            self.setPlainText(newtext)
+            self.document().setModified(True)
+            return
+        
+        
+        if self.keypos == 0:
+            self.set_find_word(find_word, addpos=1, keypos_clear=False)
+            return
+
+        
+        matched = self.set_find_word(find_word, addpos=0, keypos_clear=False)
+        if matched > 0:
+            cursor = self.textCursor()
+            cursor.setPosition(self.index)
+            cursor.movePosition(QTextCursor.NextCharacter,
+                                QTextCursor.KeepAnchor, self.length)
+            cursor.insertText(replace_word)
+            self.document().setModified(True)
+            self.set_find_word(find_word, addpos=0, keypos_clear=False)
         
 
+            
     def clearHighlightLine(self):
 
         if self.hlineno > 0:

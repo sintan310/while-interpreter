@@ -2,7 +2,7 @@
 
   While言語のインタプリタ（GUI版）
 
-      佐藤伸也 作（2021年7月2日版）
+      佐藤伸也 作（2021年7月3日版）
       shinya.sato.mito@vc.ibaraki.ac.jp
 
 ----------------------------------------------------------------
@@ -52,9 +52,9 @@ pip コマンドで前もってインストールしてください：
 1-2-1. Windows10 向け実行ファイル
 
 Windows10(64bit)版向けにコンパイル済みの実行ファイル
-while-v1.3.4-release-Win10-64bit.zip を用意しています。
+while-v1.3.7-release-Win10-64bit.zip を用意しています。
 下記リンクから入手できます：
-https://github.com/shintan310/while-interpreter/releases/download/v1.3.4-release/while-v1.3.4-release-Win10-64bit.zip
+https://github.com/shintan310/while-interpreter/releases/download/v1.3.7-release/while-v1.3.7-release-Win10-64bit.zip
 
 
 
@@ -822,6 +822,12 @@ end
 
 ----------------------------------------------
 6. 変更履歴
+
+2021-07-03
+- 置換機能を実装し、編集メニューに加えた。
+- [TODO エディタ関連]
+  - エラー行を分かりやすく表示したい
+
 
 2021-07-02
 - v1.3.6 としてリリース

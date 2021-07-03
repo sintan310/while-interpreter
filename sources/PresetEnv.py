@@ -13,7 +13,7 @@ class SimpleTableModel(QAbstractTableModel):
         super().__init__(parent)
         
         self.title = ["変数名", "値"]
-        self.mydata = [["",""],["",""],["",""]]
+        self.mydata = [["",""]]
 
         self.checker = SyntaxChecker()
         self.reg_variable = re.compile('[a-zA-Z_][a-zA-Z0-9_]*', re.I)
@@ -22,7 +22,7 @@ class SimpleTableModel(QAbstractTableModel):
         
         
     def init_data(self):
-        self.mydata = [["",""],["",""],["",""]]
+        self.mydata = [["",""]]
 
 
         

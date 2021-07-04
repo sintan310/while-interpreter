@@ -1,0 +1,78 @@
+#なお、与えるプログラムはあらかじめ構文木に変換しておく
+# xi++ => ["incx", i]
+# xi-- => ["decx", i]
+# begin s1;...;sn end => ["multi", n, [s1,...,sn]]
+# while xi != 0 do s  => ["while", i, s]
+
+procedure z:=eval(s, env): begin
+
+    # s[0] に文の識別子（"incx", "decx"、"multi", "while"）
+    # が入っているので、それに応じた動作を行う
+    
+    if s[0] = "incx" then begin
+        # 変数番号を取得
+        index := s[1];
+        
+        # 環境を更新（++ の操作）
+        env[index] := env[index]+1
+    end
+    else if s[0] = "decx" then begin
+        # 変数番号を取得
+        index := s[1];
+        
+        # 環境を更新（-- の操作）
+        env[index] := env[index]-1
+    end
+    else if s[0] = "multi" then begin
+        # 複合文の処理
+        
+        length := s[1];  # 文の個数
+        multis := s[2];  # 文の取得
+    
+        # 複合文の実行
+        i := 0;
+        while i<length do begin
+            env := eval(multis[i], env);
+            i++;
+        end;
+    end
+    else begin
+        # while文の処理
+        
+        cond_index := s[1];  # 'while xi ...' の i を取得
+        sentence := s[2];    # 文を取得
+        
+        # while文の動作を行う
+        while env[cond_index] != 0 do begin
+          env := eval(sentence, env);
+        end;
+    
+    end;
+
+    # 採取結果が含まれる環境 env を戻り値にする
+    z:=env
+end
+
+
+begin
+
+    # 初期条件
+    # P  : x0++
+    # x0 : 10
+
+    env := [10];
+    print(env);
+    env := eval(["incx", 0], env);
+    print(env);  # [11] になるはず
+    
+    
+    # 初期条件
+    # P  : while x1 != 0 do begin x1--; x0++; x0++ end
+    # x0 : 0
+    # x1 : 10
+    
+    env := [0,10];
+    print(env);
+    env := eval(["while", 1, ["multi", 3, [["decx", 1], ["incx", 0], ["incx", 0]]]], env);
+    print(env);  # [20,0] になるはず
+end

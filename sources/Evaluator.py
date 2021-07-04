@@ -1245,7 +1245,10 @@ class Evaluator:
                     return
 
                 if type(val0) is str:
-                    self.task.push(Task(Node('push', int(val0[1:-1]))))
+                    myval = int(val0[1:-1])
+                    if myval < 0:
+                        myval = 0
+                    self.task.push(Task(Node('push', myval)))
                     return
 
                 self.task.push(Task(Node('push', 0)))

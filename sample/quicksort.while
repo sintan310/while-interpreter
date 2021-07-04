@@ -1,0 +1,46 @@
+procedure z:=append(a,b): begin
+    length_a := len(a);
+    length_b := len(b);
+    
+    z := a;
+    i := 0;
+    while i<length_b do begin
+        z[length_a + i] := b[i];
+        i++;
+    end;
+end
+
+procedure z:=quicksort(list): begin
+    length := len(list);
+    if length = 0 then begin
+        z:=list;
+    end
+    else begin
+        pivot := list[0];
+        list1 := [];  list1_index := 0;
+        list2 := [];  list2_index := 0;
+        i := 1;
+        while i<length do begin
+            if list[i] < pivot then begin
+                list1[list1_index]:=list[i];
+                list1_index++;
+            end
+            else begin
+                list2[list2_index]:=list[i];
+                list2_index++;                
+            end;
+            i++;            
+        end;
+        sorted1 := quicksort(list1);
+        sorted2 := quicksort(list2);
+        z:=append(sorted1, [pivot]);
+        z:=append(z,sorted2);
+                                    
+    end    
+end
+
+
+begin
+    ret:=quicksort([5,10,4,12,1,6]);
+    print(ret)  
+end

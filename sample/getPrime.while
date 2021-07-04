@@ -1,0 +1,29 @@
+# n が素数かどうかを判定する
+procedure  z:= isPrime(n): begin
+    z:=1;
+    w:=2;
+    while (w < n) and (z=1) do begin
+        if (n mod w)=0 then z:=0;
+        w++;
+    end
+end
+
+
+# n 番目の素数を取得する
+procedure  z:= getPrime(n): begin
+    hit:=0;  # 素数を見つけた回数
+    z:=2;
+    
+    while (hit < n) do begin
+        z++;
+        kekka:=isPrime(z);
+
+        # z が素数ならば、素数ゲットで hit++
+        if kekka=1 then hit++;
+    end
+end
+
+begin
+    z:=getPrime(5);
+    print(z);       # 13 が表示されるはず
+end

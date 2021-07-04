@@ -1,0 +1,28 @@
+# バブルソート
+begin
+    list := [6,9,8,4,2];
+  
+    # どの要素まで処理するか
+    kokomade := len(list)-1;
+    
+    while kokomade>0 do begin
+        i:=0;
+        
+        while i<kokomade do begin
+            # i から kokomade までを処理する
+    
+            if list[i] > list[i+1] then begin
+                # list[i] の方が大きいので、i+1 の要素と取り換える
+                tmp := list[i];
+                list[i] := list[i+1];
+                list[i+1] := tmp;
+            end;
+      
+            i++;
+        end;
+    
+        kokomade--;
+    end;
+
+    print(list)  # [2, 4, 6, 8, 9] になるはず
+end

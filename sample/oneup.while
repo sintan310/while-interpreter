@@ -1,0 +1,17 @@
+# 引数に与えられた値を一つ増やす
+procedure z:= oneUp(a): begin
+    b:=a;
+    b++;
+    z:=b;
+end
+
+begin
+    x:=100;
+    z:=oneUp(x);
+    print(z);   # 101 が表示されるはず
+    print(x);   # 100 が表示されるはず
+
+    # ちなみに、procedure は式として扱われるようにしてあるので
+    # print(oneUp(200)) として実行すると 201 が返ってくる
+    print(oneUp(200))
+end

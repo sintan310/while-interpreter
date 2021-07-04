@@ -1,0 +1,33 @@
+procedure z:=quicksort(list): begin
+    length := len(list);
+    if length = 0 then begin
+        z:=list;
+    end
+    else begin
+        list1 := [];
+        list2 := [];        
+        pivot := list[0];
+        
+        i := 1;
+        while i<length do begin
+            val := list[i];
+            if val < pivot then begin
+                list1:= list1 + [val];
+            end
+            else begin
+                list2:= list2 + [val];
+            end;
+            i++;            
+        end;
+        sorted1 := quicksort(list1);
+        sorted2 := quicksort(list2);
+        z:=sorted1 + [pivot] + sorted2;
+                                    
+    end    
+end
+
+
+begin
+    ret:=quicksort([5,10,4,12,1,6]);
+    print(ret)  
+end

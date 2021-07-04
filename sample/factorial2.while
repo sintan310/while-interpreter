@@ -1,0 +1,92 @@
+# スタック構造
+procedure z:=mkStack(): begin
+    z:=[0,[0]]
+end
+
+procedure z:=isEmpty(s): begin
+    if s[0]=0 then z:=1
+    else z:=0
+end
+
+procedure z:=push(s,n): begin
+    index := s[0];
+    index++;
+    vals := s[1];
+    vals[index] := n;
+    z := [index, vals];
+end
+
+procedure z:=pop(s): begin
+    index := s[0];
+    index--;
+    z := [index, s[1]]
+end
+
+procedure z:=top(s): begin
+    index := s[0]; 
+    vals := s[1];
+    z := vals[index] 
+end
+
+
+# 再帰なしの階乗
+procedure z:=Fact(n): begin
+    task := mkStack();
+    retval := mkStack();
+    
+    # task スタックには [cnt, n] という形式で入れる
+    # cnt は継続値（初期なら1, 2度目なら2）
+    # n は、階乗計算の対象値（Fact(3) のときには n=3）
+    task := push(task, [1, n]);
+    sentinel := 0;
+      
+    while sentinel=0 do begin
+
+        # タスクを一つ取得
+        aTask := top(task);  
+        task := pop(task);
+
+        # 階乗計算の対象となる数を n に
+        n := aTask[1];
+
+        # 初期の処理(cnt=1)か、継続の処理(cnt=2)か
+        cnt := aTask[0];
+        if cnt=1 then begin
+            if n=0 then      
+                # 値用のスタックに 0! の結果である 1 を push
+                retval := push(retval, 1)
+    
+            else begin
+                # Fact(n-1) の後にもう一度処理（継続処理）させる
+                task := push(task, [2, n]);
+
+                # Fact(n-1) のために、新たなタスクを push する
+                task := push(task, [1, n-1]);
+            end
+        end
+        else begin
+            # 継続処理用
+
+            # 値用のスタックから一つ取得
+            # なお、z1 には Fact(n-1) の結果が入っている
+            z1 := top(retval);  retval := pop(retval);
+
+            # 階乗を計算し、値用のスタックへ push しておく
+            z := n * z1;
+            retval := push(retval, z);
+        end;
+
+        # タスクスタックが空っぽなら終了
+        sentinel := isEmpty(task);
+    end;
+
+    # 値用スタックに積んである結果を一つ取得し、戻り値にする
+    z := top(retval)
+end
+
+
+# 実行
+begin
+    z:=Fact(4);
+    print(z)     # 24 になるはず
+end

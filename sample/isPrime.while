@@ -1,0 +1,21 @@
+# 素数判定
+procedure  z:= isPrime(n): begin
+    z:=1;
+    w:=2;  # 2 から始めて n まで検査する
+    
+    while (w < n) and (z=1) do begin  
+
+        # 割り切れるときは素数でないので終了
+        if (n mod w)=0 then z:=0;
+        
+        w++;
+    end
+end
+
+begin
+    z:=isPrime(3);
+    print(z);       # 1 が表示されるはず
+    
+    z:=isPrime(4);
+    print(z)        # 0 が表示されるはず
+end

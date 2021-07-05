@@ -240,6 +240,9 @@ class QCodeEditor(QPlainTextEdit):
         self.find_index = -1
         self.find_length = -1
 
+
+        
+        
         
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -425,7 +428,7 @@ class QCodeEditor(QPlainTextEdit):
                 end_required = True
                 
             else:
-                # 同レベルが出現するので、ペア end はいらない。
+                # 同レベルが既に出現するので、ペア end はいらない。
                 # ただし、そこまでに begin が同レベル以下で出現していれば
                 # ペアの end は必要。
                 rx1 = QRegExp('\\b(begin|procedure)\\b')
@@ -537,12 +540,12 @@ class QCodeEditor(QPlainTextEdit):
             digits += 1
         space = 3 + self.fontMetrics().width('9') * digits
         """
-        space = 10 + self.fontMetrics().width('9') * 3
+        space = 30 + self.fontMetrics().width('9') * 3
         return space
     
 
     def updateLineNumberAreaWidth(self, _):
-        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+        self.setViewportMargins(self.lineNumberAreaWidth()+3, 0, 0, 0)
 
     def updateLineNumberArea(self, rect, dy):
         if dy:
@@ -847,11 +850,12 @@ class QCodeEditor(QPlainTextEdit):
 
                 if number == str(current_lineno):
                     painter.setPen(Qt.black)
+                    
                 else:
-                    painter.setPen(Qt.darkGray)
+                    painter.setPen(Qt.gray)
 
                 painter.drawText(0, top,
-                                 self.lineNumberArea.width()-3, height,
+                                 self.lineNumberArea.width()-13, height,
                                  Qt.AlignRight, number)
                 
                 

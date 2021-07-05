@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import copy
 
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PySide2.QtGui import QFont, QColor
 from PySide2.QtWidgets import (QWidget, QMainWindow, 
                                QTableWidget, QHeaderView, QTableWidgetItem,
-                               QHBoxLayout, QAbstractItemView)
+                               QHBoxLayout, QAbstractItemView,
+                               QGraphicsOpacityEffect)
 
 
 
@@ -82,8 +83,30 @@ class EnvViewer(QWidget):
         self.set_data(self.data)
 
 
+        self.effects = []
+        self.effect_border = 5
+        for i in range(10):
+            child = QWidget(self)
+            effect = QGraphicsOpacityEffect(child)
+            child.setGraphicsEffect(effect)
+            child.setStyleSheet("border-width: %dpx; border-style: solid; border-color: yellow; background-color: none; border-radius:10px;" % self.effect_border)
+            child.resize(0, 0)
+            
+            anim = QPropertyAnimation(effect, b"opacity")
+            anim.setStartValue(0.6)
+            anim.setEndValue(0.3)
+            anim.setDuration(400)
+            anim.setEasingCurve(QEasingCurve.InCubic)
+            anim.finished.connect(self.animation_finished)
+            self.effects.append((child, anim, effect))
 
-        
+            
+    def animation_finished(self):
+        for widget, anim, effect in self.effects:
+            widget.resize(0,0)
+            widget.move(0,0)
+            
+            
     def set_HeaddaColumnWidth(self, width):
         self.tableWidget.setColumnWidth(0, width)
 
@@ -95,7 +118,14 @@ class EnvViewer(QWidget):
         self.font = font
         self.setFont(self.font)
         
+        font_size = self.font.pointSize()
+        self.setStyleSheet(
+            '''QToolTip {
+            font-size:%dpt
+            }''' % font_size)        
+        
         #self.hheader.setFont(self.font)
+        
         self.write_data()
         
         
@@ -111,8 +141,15 @@ class EnvViewer(QWidget):
 
         
     def write_data(self):
+
+
+        self.child1 = QWidget(self)
+
+        
         # self.tableWidget.setHorizontalHeaderLabels(self.title)
         # テーブルの中身作成
+        changed_row = []
+        
         self.tableWidget.setRowCount(len(self.data))
         
         row = 0
@@ -135,27 +172,41 @@ class EnvViewer(QWidget):
                     self.previous_data[key] = "0"
                     
                 item.setToolTip("変更前: " + self.previous_data[key])
-                font_size = self.font.pointSize()
-                self.setStyleSheet(
-                    '''QToolTip {
-                    font-size:%dpt
-                    }''' % font_size)        
-                
-                
-            
-            self.tableWidget.setItem(row, 1, item)
 
+                changed_row.append(row)
+        
+
+                
+                
+            self.tableWidget.setItem(row, 1, item)
+                        
             row += 1
             
+        if changed_row != []:
+            width = self.tableWidget.columnWidth(1)
+            for i, row in enumerate(changed_row):
+                if i>len(self.effects): break
+                
+                y = 0
+                for i in range(row):
+                    y += self.tableWidget.rowHeight(i)
 
+                height = self.tableWidget.rowHeight(row)
+                
+                (widget, anim, effect) = self.effects[i]
+
+                # 12 is the width of the scrollbar
+                widget.resize(width + self.effect_border*2 - 12,
+                              height +  self.effect_border*2)
+                widget.move(self.tableWidget.columnWidth(0) -
+                            self.effect_border,
+                            self.tableWidget.horizontalHeader().height()+
+                            y - 
+                            self.effect_border)
+                
+                anim.start()
             
-        """
-        for i in range(len(self.data)):
-            for j in range(len(self.title)):
-                item = QTableWidgetItem(str(self.data[i][j]))
-                item.setFont(self.font)
-                self.tableWidget.setItem(i, j, item)
-        """
+            
 
         
 

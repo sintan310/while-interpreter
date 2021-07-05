@@ -696,16 +696,6 @@ class Evaluator:
                         
                     self.env[var_name] = target_value
 
-                    """
-                    # refname 処理
-                    if not self.name_ref.is_empty():
-                        refnames = self.name_ref.top()
-
-                        if var_name in refnames.keys():
-                            ref = refnames[var_name]                            
-                            stacked_env = self.dump.top()
-                            stacked_env[ref] = target_value
-                    """
                     
                     return
                 
@@ -893,7 +883,6 @@ class Evaluator:
         
         elif aNode.type == 'remove_callparams':
             params = aNode.children[0]
-            refname = aNode.children[1]
             
             for aparam in params:
                 aval = self.values.pop()
@@ -905,7 +894,6 @@ class Evaluator:
             for param in remove_target:
                 self.env.pop(param, None)
 
-            self.name_ref.push(refname)
                 
             return
             
@@ -913,13 +901,23 @@ class Evaluator:
             if cnt == 2:
                 # procedure call の後始末（環境を整える）
                 procedure_retname = aNode.children[0]
-                procedure_params = aNode.children[1]
-                call_params = aNode.children[2]
+                refnames = aNode.children[1]
+                
                 orig_env = self.dump.pop()
 
-                refnames = self.name_ref.pop()
                 for proc_arg, call_name in refnames.items():
-                    orig_env[call_name] = self.env[proc_arg]
+                    try:
+                        orig_env[call_name] = self.env[proc_arg]
+                    except:
+                        print("Error!")
+                        print("orig_env")
+                        print(orig_env)
+                        print("call_name", call_name)
+                        print("self.env")
+                        print(self.env)
+                        print("proc_arg", proc_arg)
+                        print("orig_env[call_name]")
+                        print("self.env[proc_arg]")
                 
                 
                 try:
@@ -1040,17 +1038,6 @@ class Evaluator:
                 except KeyError as e:
                     self.env[var_name] = 1
 
-
-                # refname 処理
-                target_value = self.env[var_name]
-                if not self.name_ref.is_empty():
-                    refnames = self.name_ref.top()
-
-                    ref = refnames.get(var_name)
-                    if ref is not None:
-                        stacked_env = self.dump.top()
-                        stacked_env[ref] = target_value
-                    
                 return
 
             elif aNode.leaf == '--':
@@ -1064,16 +1051,6 @@ class Evaluator:
                 else:
                     self.env[var_name] = 0
 
-                # refname 処理
-                target_value = self.env[var_name]
-                if not self.name_ref.is_empty():
-                    refnames = self.name_ref.top()
-
-                    ref = refnames.get(var_name)
-                    if ref is not None:
-                        stacked_env = self.dump.top()
-                        stacked_env[ref] = target_value
-                    
                 return
 
             
@@ -1289,8 +1266,16 @@ class Evaluator:
             self.task.clear()
             return
 
+        elif aNode.type == "nop":
+            return
+        
+        else:
+            print("There is no operation")
+            print(aNode.type, aNode.leaf)
+            self.task.push(Task(Node('critical_error')))
+            return
 
-
+            
         
     def eval_exp(self, aNode):
 
@@ -1385,7 +1370,7 @@ class Evaluator:
                 procedure_retname = self.procedures[procedure_name][0]
                 procedure_params = self.procedures[procedure_name][1]
             except:
-                myprint("実行エラー: 手続き '{}' が定義されていません。".format(procedure_name), error=True)
+                myprint("%d行目: 手続き '%s' が定義されていません。" % (aNode.lineno, procedure_name), error=True)
 
                 self.task.push(Task(Node('critical_error')))
                 return
@@ -1397,13 +1382,15 @@ class Evaluator:
 
             # 引数の個数のチェック
             if len(procedure_params) > len(call_params):
-                myprint("実行エラー: 手続き {} に与えらた引数の個数が少なすぎです（{}個にしてください）。".format(procedure_name, len(procedure_params)))
+                myprint("%d行目: 手続き '%s' に与えらた引数の個数が少なすぎです（%d個にしてください）。" % (aNode.lineno, procedure_name, len(procedure_params)),
+                        error=True)
 
                 self.task.push(Task(Node('critical_error')))
                 return
 
             elif len(procedure_params) < len(call_params):
-                myprint("実行エラー: 手続き {} に与えらた引数の個数が多すぎです（{}個にしてください）。".format(procedure_name, len(procedure_params)))
+                myprint("%d行目: 手続き '%s' に与えらた引数の個数が多すぎです（%d個にしてください）。" % (aNode.lineno, procedure_name, len(procedure_params)),
+                        error=True)
 
                 self.task.push(Task(Node('critical_error')))
                 return
@@ -1426,14 +1413,14 @@ class Evaluator:
                 
             # 本体の実行            
             tasks += [Task(Node("remove_callparams", "",
-                                [procedure_params, refname]), cnt=1)]
+                                [procedure_params]), cnt=1)]
             tasks += [Task(procedure_body, cnt=1)]
 
 
             # 後処理（環境を整える）
             tasks += [Task(Node("call", "",
                             [procedure_retname,
-                             procedure_params, call_params],
+                             refname],
                             lineno=aNode.lineno), cnt=2)]
 
             # 処理をタスクに積む
@@ -1627,8 +1614,7 @@ class Evaluator:
                     'pretty_env': self.pretty_env(self.env),
                     'task': self.task,
                     'values': self.values,
-                    'dump': self.dump,
-                    'nameref': self.name_ref}
+                    'dump': self.dump}
         
         # はじめに実行される行番号を取得しておく
         if len(node_list) > 0:
@@ -1644,8 +1630,7 @@ class Evaluator:
                 'pretty_env': self.pretty_env(self.env),
                 'task': self.task,
                 'values': self.values,
-                'dump': self.dump,
-                'nameref': self.name_ref}
+                'dump': self.dump}
             
 
     def eval_onestep(self):
@@ -1654,8 +1639,7 @@ class Evaluator:
                     'pretty_env': {},
                     'task': self.task,
                     'values': self.values,
-                    'dump': self.dump,
-                    'nameref': self.name_ref}
+                    'dump': self.dump}
 
         #print("---")        
         while True:
@@ -1690,8 +1674,7 @@ class Evaluator:
                         'empty': True,
                         'task': self.task,
                         'values': self.values,
-                        'dump': self.dump,
-                        'nameref': self.name_ref}
+                        'dump': self.dump}
 
             
             if self.onestep_lineno == 0:
@@ -1713,8 +1696,7 @@ class Evaluator:
                 'empty':self.task.is_empty(),
                 'task': self.task,
                 'values': self.values,
-                'dump': self.dump,
-                'nameref': self.name_ref}
+                'dump': self.dump}
         
 
         

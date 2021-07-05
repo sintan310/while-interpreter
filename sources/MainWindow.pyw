@@ -13,11 +13,12 @@
 import sys
 import os
 import copy
+import re
 
 from PySide2.QtCore import (Qt, QSize, 
                             QSettings, QEvent, QDir, QFile, QFileInfo,
                             QTextStream)
-from PySide2.QtGui import QFont, QIcon, QColor
+from PySide2.QtGui import QFont, QIcon, QColor, QTextCursor
 from PySide2.QtWidgets import (QWidget, QPushButton, 
                                QTextEdit, QGridLayout, QVBoxLayout, QHBoxLayout,
                                QSplitter,
@@ -94,10 +95,7 @@ class CentralWidget(QWidget):
         #self.editor = QTextEdit()
         #self.editor = QPlainTextEdit()
 
-        self.editor = QCodeEditor()        
-        self.editor.setUndoRedoEnabled(True)
-        self.editor.setStyleSheet('border:0px')
-        self.editor.verticalScrollBar().setStyleSheet('''
+        self.scrollbar_style = '''
         QScrollBar:vertical{
          background: white;
          width: 15px;
@@ -110,7 +108,12 @@ class CentralWidget(QWidget):
         QScrollBar::handle:vertical:hover{
          background: gray;
         }
-        ''')
+        '''
+        
+        self.editor = QCodeEditor()        
+        self.editor.setUndoRedoEnabled(True)
+        self.editor.setStyleSheet('border:0px')
+        self.editor.verticalScrollBar().setStyleSheet(self.scrollbar_style)
         
         
         # 実行結果の表示用
@@ -119,10 +122,13 @@ class CentralWidget(QWidget):
         self.messageArea.setReadOnly(True)
         self.messageArea.setUndoRedoEnabled(False)
         self.messageArea.setStyleSheet("background-color: #e0e0e0;border:0px")
+        self.messageArea.verticalScrollBar().setStyleSheet(self.scrollbar_style)
 
         rowHeight = self.fontMetrics().lineSpacing()
         self.messageArea.setMinimumHeight(rowHeight * 1)
 
+        self.messageArea.setObjectName("messageArea")
+        
 
         # 検索用
         self.findField = FindWidget(self.editor,
@@ -163,6 +169,7 @@ class CentralWidget(QWidget):
         
         if error:
             cursor.insertHtml('<font color="#cc3333">%s</font>' % escaped)
+            
         else:
             cursor.insertHtml('<font color="black">%s</font>' % escaped)
 
@@ -171,7 +178,7 @@ class CentralWidget(QWidget):
 
     def clear_messages(self):
         self.messageArea.clear()
-
+        
 
     def get_program(self):
         return self.editor.toPlainText()
@@ -219,6 +226,27 @@ class MainWindow(QMainWindow):
         self.centralWidget = CentralWidget(parent=parent)
         self.setCentralWidget(self.centralWidget)
         self.centralWidget.editor.document().modificationChanged.connect(self.modified_event)
+
+
+        self.centralWidget.messageArea.viewport().installEventFilter(self)
+        self.centralWidget.messageArea.installEventFilter(self)
+
+        
+        self.scrollbar_style = '''
+        QScrollBar:vertical{
+         background: white;
+         width: 12px;
+         height: 50px;
+         }
+        QScrollBar::handle:vertical{
+         background: lightgray;
+         min-height: 100;
+        }
+        QScrollBar::handle:vertical:hover{
+         background: gray;
+        }
+        '''
+
 
         
         # Menu Bar
@@ -379,7 +407,7 @@ class MainWindow(QMainWindow):
     def setup_Dock(self):
         # 環境表示用
         self.envViewer = EnvViewer()
-
+        self.envViewer.tableWidget.verticalScrollBar().setStyleSheet(self.scrollbar_style)
 
         # ボタン群レイアウト
         #layout = QGridLayout()
@@ -496,7 +524,23 @@ class MainWindow(QMainWindow):
             elif source.objectName() == self.presetDock.objectName():
                 self.presetDockAct.setChecked(False)
 
-            
+        elif event.type() == QEvent.MouseButtonRelease and \
+             source == self.centralWidget.messageArea.viewport():
+
+            cursor = self.centralWidget.messageArea.textCursor()
+            cursor.clearSelection()
+            block_text = cursor.block().text()
+            line_match = re.search('^(\d+)行目', block_text)
+            if line_match:
+                lineno = int(line_match.group(1))
+                #cursor = self.editor.textCursor()
+                #cursor.movePosition(QTextCursor.Start)
+                cursor = QTextCursor(self.centralWidget.editor.document().findBlockByNumber(lineno - 1))
+                self.centralWidget.editor.setTextCursor(cursor)
+                self.centralWidget.editor.setFocus()
+                
+
+                
         return super().eventFilter(source, event)
 
     

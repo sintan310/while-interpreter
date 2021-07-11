@@ -52,9 +52,9 @@ pip コマンドで前もってインストールしてください：
 1-2-1. Windows10 向け実行ファイル
 
 Windows10(64bit)版向けにコンパイル済みの実行ファイル
-while-v1.3.7-release-Win10-64bit.zip を用意しています。
+while-v1.3.9-release-Win10-64bit.zip を用意しています。
 下記リンクから入手できます：
-https://github.com/shintan310/while-interpreter/releases/download/v1.3.7-release/while-v1.3.7-release-Win10-64bit.zip
+https://github.com/shintan310/while-interpreter/releases/download/v1.3.9-release/while-v1.3.9-release-Win10-64bit.zip
 
 
 

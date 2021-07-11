@@ -315,6 +315,22 @@ def p_statement(t):
         elif t[1] == 'procedure':
             if len(t) == 8:
                 # PROCEDURE NAME SUBST NAME procedure_argument COLON statement
+
+                # 環境表示用の工夫
+                if t[7].type == 'multi':
+                    stms = t[7].children
+                    last_elem = stms.pop()
+                    last_elem.type = 'nop-end-procedure'
+                    t[7].children = stms + [last_elem]
+                    
+                else:
+                    # multi 以外の statement
+                    lineno = t.lineno(1)
+                    dummy_line = Node("nop-end-procedure", lineno=lineno)
+
+                    t[7] = Node("multi", "", [t[7], dummy_line],
+                                lineno=lineno)
+                    
                 t[0] = Node("procedure", t[4], [t[2], t[5], t[7]],
                             lineno=t.lineno(1))
             else:
@@ -528,9 +544,26 @@ class Stack:
         self.stack = []
         self.name = name
 
+    def __len__(self):
+        return len(self.stack)
+    
     def __str__(self):
-        return self.name+"(%d)" % len(self.stack)
+        if self.name == "dump":
+            retstr = ""
+            for level, env in enumerate(self.stack):
+                retstr += "=== dump ===\n"
+                retstr += "level%d\n" % level
+                retstr += str(env)
+                retstr += "\n============\n"
+            return retstr
         
+                
+        return self.name+"(%d)" % len(self.stack)
+
+    def item_at(self, num):
+        return(self.stack[num])
+        
+    
     def clear(self):
         self.stack = []
 
@@ -605,7 +638,7 @@ class Evaluator:
             self.task = param['task']
             self.values = param['values']
             self.dump = param['dump']
-            self.nameref = param['nameref']
+            self.onestep_lineno = param['lineno']
         except:
             pass
 
@@ -649,6 +682,7 @@ class Evaluator:
 
     def pretty_env(self, env):
         pretty_env = {}
+        
         for key, value in env.items():
             pretty_env[key] = self.pretty_print_value(value)
 
@@ -1268,7 +1302,10 @@ class Evaluator:
 
         elif aNode.type == "nop":
             return
-        
+
+        elif aNode.type == "nop-end-procedure":
+            return
+            
         else:
             print("There is no operation")
             print(aNode.type, aNode.leaf)
@@ -1473,7 +1510,7 @@ class Evaluator:
                 sentence = aline[0] + ":=" + aline[1]
                 aNode = parser.parse(sentence)
                 self.task.push(Task(aNode, cnt=1))
-                print(sentence)
+                #print(sentence)
 
             while not self.task.is_empty():            
                 task = self.task.pop()
@@ -1614,7 +1651,8 @@ class Evaluator:
                     'pretty_env': self.pretty_env(self.env),
                     'task': self.task,
                     'values': self.values,
-                    'dump': self.dump}
+                    'dump': self.dump,
+                    }
         
         # はじめに実行される行番号を取得しておく
         if len(node_list) > 0:
@@ -1634,12 +1672,17 @@ class Evaluator:
             
 
     def eval_onestep(self):
+        finished_procedure_status = False
+        
         if self.task.is_empty():
             return {'lineno':0, 'env':{}, 'empty':True,
                     'pretty_env': {},
                     'task': self.task,
                     'values': self.values,
-                    'dump': self.dump}
+                    'dump': self.dump,
+                    'procedure_finished': finished_procedure_status,
+                    'lower_level_pretty': {}  # 一つ下位レベル dump の pretty
+                    }
 
         #print("---")        
         while True:
@@ -1657,16 +1700,21 @@ class Evaluator:
             # 次に実行する lineno の取得
             if not self.task.is_empty():
                 #(aNode1, cnt1) = self.task.pop()
-                task = self.task.pop()
+                task_next = self.task.pop()
                 
                 if self.onestep_lineno != 0:
                     old_lineno = self.onestep_lineno
                     
-                self.onestep_lineno = task.node.lineno
-                self.task.push(task)
+                self.onestep_lineno = task_next.node.lineno
+                self.task.push(task_next)
                 
             else:
                 # empty なら終了
+                if len(self.dump) > 0:
+                    # 積んである latest 環境の pretty_env
+                    lower_pretty = self.pretty_env(self.dump.item_at(-1))
+                else:
+                    lower_pretty = {}
                 
                 return {'lineno':0,
                         'env': self.env,
@@ -1674,7 +1722,10 @@ class Evaluator:
                         'empty': True,
                         'task': self.task,
                         'values': self.values,
-                        'dump': self.dump}
+                        'dump': self.dump,
+                        'procedure_finished': finished_procedure_status,
+                        'lower_level_pretty': lower_pretty
+                        }
 
             
             if self.onestep_lineno == 0:
@@ -1689,14 +1740,34 @@ class Evaluator:
                 break
 
             
-        
+
+        # task stack が empty ではなく、最後に実行した task.node が
+        # nop-end-procedure なら、finished_procedure_status を True にして返す
+        if task.node.type == "nop-end-procedure":
+            finished_procedure_status = True
+        else:
+            finished_procedure_status = False
+
+
+        #print("dump", str(self.dump))
+        if len(self.dump) > 0:
+            # 積んである latest 環境の pretty_env
+            lower_pretty = self.pretty_env(self.dump.item_at(-1))
+        else:
+            lower_pretty = {}
+
+
+            
         return {'lineno':self.onestep_lineno,
                 'env': self.env,
                 'pretty_env': self.pretty_env(self.env),
                 'empty':self.task.is_empty(),
                 'task': self.task,
                 'values': self.values,
-                'dump': self.dump}
+                'dump': self.dump,
+                'procedure_finished': finished_procedure_status,
+                'lower_level_pretty': lower_pretty
+                }
         
 
         

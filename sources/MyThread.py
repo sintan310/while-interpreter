@@ -66,9 +66,9 @@ class MyThread(QThread):
 
         
     def run(self):
-        # evaluation 結果に従って、メンバ変数の self.evaluatorInfo を書き換える
-        # self.evaluatorInfo = None
-        
+        # evaluation 結果に従って、メンバ変数の self.evaluatorInfo を書き換える        
+        # self.evaluatorInfo = None 
+
         if self.stopped:
             self.restart()
             

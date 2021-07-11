@@ -12,7 +12,7 @@ end
 
 procedure z:=quicksort(list): begin
     length := len(list);
-    if length = 0 then begin
+    if length <= 1 then begin
         z:=list;
     end
     else begin

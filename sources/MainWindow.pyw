@@ -68,7 +68,14 @@ class History:
             
         return retval
 
+    def get_at(self, num):
+        try:
+            return self.history[num]
+        except:
+            return {}
 
+            
+    
             
     def can_rewind(self):
         if len(self.history) > 1:
@@ -407,7 +414,8 @@ class MainWindow(QMainWindow):
     def setup_Dock(self):
         # 環境表示用
         self.envViewer = EnvViewer()
-        self.envViewer.tableWidget.verticalScrollBar().setStyleSheet(self.scrollbar_style)
+        #self.envViewer.tableWidget.verticalScrollBar().setStyleSheet(self.scrollbar_style)
+        self.envViewer.vertical_scrollbar_setStyleSheet(self.scrollbar_style)
 
         # ボタン群レイアウト
         #layout = QGridLayout()
@@ -858,7 +866,7 @@ class MainWindow(QMainWindow):
             #self.centralWidget.editor.moveCursor(self.cursor.End)
         
             # デバッグの tableView と実行結果をクリア
-            self.envViewer.set_data({})
+            self.envViewer.clear_data()
             self.centralWidget.clear_messages()
 
             # 検索フィールドを閉じておく
@@ -905,7 +913,7 @@ class MainWindow(QMainWindow):
                     self.stop_debug()
 
                     # デバッグの tableView と実行結果をクリア
-                    self.envViewer.set_data({})
+                    self.envViewer.clear_data()
                     self.centralWidget.clear_messages()
                     
                     # 変更あり情報（modified）をクリア
@@ -1063,7 +1071,7 @@ class MainWindow(QMainWindow):
         
         self.centralWidget.set_ReadOnly(False)
         self.centralWidget.clear_HighlightLine()
-        self.envViewer.set_data({})
+        self.envViewer.clear_data()
 
         self.focusWidget.setFocus()
         
@@ -1087,7 +1095,8 @@ class MainWindow(QMainWindow):
 
             # history に追加
             self.history.set_elem_as_the1st(evaluatorInfo)
-            self.envViewer.set_data(evaluatorInfo['pretty_env'])
+            self.envViewer.set_data(evaluatorInfo['pretty_env'],
+                                    level=len(evaluatorInfo['dump']))
 
             
             # ボタン連動
@@ -1118,34 +1127,62 @@ class MainWindow(QMainWindow):
 
         # 一つ前の実行結果を取得
         self.history.discard_thelatest()        
-        current = self.history.get_elem()
+        #current = self.history.get_elem()
+        current = self.history.get_at(-1)
         
         self.centralWidget.set_HighlightLine(current['lineno'],
                                              self.debug_trail)
+
         
+        # rewind のときのみ set_data で previous を指定する
         if not self.history.can_rewind():
             # 巻き戻せない            
-            self.envViewer.set_data(current['pretty_env'], previous={})
+            self.envViewer.set_data(current['pretty_env'],
+                                    level=len(current['dump']),
+                                    previous={})
             self.rewindDebugButton.setEnabled(False)
             
             
         else:
-            previous = self.history.get_elem(-1)
+            #previous = self.history.get_elem(-1)
+            previous = self.history.get_at(-2)
+
+            if 'lower_level_pretty' in previous.keys():
+                lower_level_data = previous['lower_level_pretty']
+            else:
+                lower_level_data = None
+
+            """
+            print("---")
+            print(previous)
+            print("---")            
+            print("current", current['pretty_env'])
+            print("lower_current", current['lower_level_pretty'])
+            print("previous", previous['pretty_env'])
+            print("lower", previous['lower_level_pretty'])
+            """
+            
             self.envViewer.set_data(current['pretty_env'],
-                                    previous['pretty_env'])
+                                    level=len(current['dump']),
+                                    previous=previous['pretty_env'],
+                                    lower_data=lower_level_data)
 
     
 
     def run_program_onestep(self):
         self.startDebugButton.setEnabled(False)
-        self.rewindDebugButton.setEnabled(True)
 
-        current = self.history.get_elem()
+        #current = self.history.get_elem()
+        current = self.history.get_at(-1)
+
+        
         
         evalInfo = copy.deepcopy(current)
         self.thread.set_env(evalInfo)
-        
-        #self.envViewer.set_data(current['pretty_env'])
+
+        # onestep 実行が終わるまで onestepDebugButton は無効に
+        self.onestepDebugButton.setEnabled(False)
+        self.rewindDebugButton.setEnabled(False)
         
         self.thread.start()
         return
@@ -1197,18 +1234,46 @@ class MainWindow(QMainWindow):
     def eval_finished(self):
 
         evaluatorInfo = self.thread.evaluatorInfo
+        """
         try:
-            self.envViewer.set_data(evaluatorInfo['pretty_env'])
+            self.envViewer.set_data(evaluatorInfo['pretty_env'],
+                                    len(evaluatorInfo['dump']))
             
         except:
-            self.envViewer.set_data({})
+            print("[except in eval_finished]")
+            print(evaluatorInfo)
+            self.envViewer.clear_data()
+        """
 
+        if 'dump' in evaluatorInfo.keys():
+            level = len(evaluatorInfo['dump'])
+            if 'procedure_finished' in evaluatorInfo.keys():
+                procedure_finished = evaluatorInfo['procedure_finished']
+            else:
+                procedure_finished = False
+                
+        else:
+            level = 0
+            procedure_finished = False
+
+        self.envViewer.set_data(evaluatorInfo['pretty_env'],
+                                level=level,
+                                procedure_finished=procedure_finished)
+            
             
         if self.thread.oneStep == False:
-            # 通常実行
+            # 通常実行の場合
             self.enable_startButton()
+            
         else:
-            # oneStep 実行
+            # oneStep 実行の場合
+
+            if 'empty' not in evaluatorInfo.keys():
+                return
+                
+                
+            self.rewindDebugButton.setEnabled(True)
+
 
             # history に追加
             self.history.set_elem(evaluatorInfo)
@@ -1227,6 +1292,7 @@ class MainWindow(QMainWindow):
                                         QMessageBox.Ok)
 
             else:
+                self.onestepDebugButton.setEnabled(True)
                 self.centralWidget.set_HighlightLine(evaluatorInfo['lineno'],
                                                      self.debug_trail)
             

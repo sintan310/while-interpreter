@@ -1,0 +1,10 @@
+# 階乗
+procedure z:=fact(n): begin
+    if n=0 then z:=1
+    else z:=n*fact(n-1);
+end
+
+begin
+    z:=fact(3);
+    print(z)      # 6のはず
+end

@@ -28,11 +28,11 @@ from PySide2.QtWidgets import (QWidget, QPushButton,
                                QDockWidget, QStyle, QFrame, QFileDialog,
                                QLineEdit, QLabel, QSpacerItem, QSizePolicy)
 
-from QCodeEditor import QCodeEditor
-from EnvViewer import EnvViewer
-from PresetEnv import PresetEnv
-from MyThread import MyThread
-from FindWidget import FindWidget
+from src.QCodeEditor import QCodeEditor
+from src.EnvViewer import EnvViewer
+from src.PresetEnv import PresetEnv
+from src.MyThread import MyThread
+from src.FindWidget import FindWidget
 
 CONFIG_FILE = 'config.ini'
 

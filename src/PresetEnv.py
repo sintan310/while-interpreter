@@ -6,7 +6,7 @@ from PySide2.QtWidgets import (QApplication, QMainWindow, QVBoxLayout,
 
 import re
 
-from ValueSyntaxChecker import SyntaxChecker
+from src.ValueSyntaxChecker import SyntaxChecker
 
 class SimpleTableModel(QAbstractTableModel):
     def __init__(self, font=None, parent=None):

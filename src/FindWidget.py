@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 from PySide2.QtCore import (Qt, QSize, QParallelAnimationGroup,
                             QPropertyAnimation, QPoint, QAbstractAnimation)
 from PySide2.QtWidgets import (QWidget, QPushButton, QLineEdit, QLabel,

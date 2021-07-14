@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 
-from Evaluator import Evaluator
+from src.Evaluator import Evaluator
 from PySide2.QtCore import (QThread, QMutex, Signal, QMutexLocker,
                             QCoreApplication)
 

@@ -38,18 +38,18 @@
 - Windows 10(64bit), Python 3.7.7
 - Ubuntu 20.04.2 LTS, Python 3.8.5
 
-プログラムのソースは sources フォルダに入っています。
-Python3 にて MainWindow.pyw を実行してください：
- python3 MainWindow.pyw
- 
 
 ソースの実行には Python ライブラリ PySide2、PLY(Python Lex-Yacc) が必要です。
 pip コマンドで前もってインストールしてください：
  pip install pyside2 ply
 
 
+1-3. 実行方法
+Python3 にて MainWindow.pyw を実行してください：
+ python3 MainWindow.pyw
+ 
 
-1-2-1. Windows10 向け実行ファイル
+1-3-1. Windows10 向け実行ファイル
 
 Windows10(64bit)版向けにコンパイル済みの実行ファイル
 while-v1.3.9-release-Win10-64bit.zip を用意しています。
@@ -852,6 +852,12 @@ end
 
 ----------------------------------------------
 6. 変更履歴
+
+2021-07-14
+- ディレクトリ構成を変更。MainWindow.pyw 以外は srcフォルダへ移動した。
+- 特徴説明のための animation gif を追加。
+
+
 
 2021-07-11
 - v1.3.9 としてリリース

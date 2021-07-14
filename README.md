@@ -1,19 +1,23 @@
 # whileプログラムのインタプリタ
 
-![screenshot](pic/screenshot1.png)
+![screenshot](pic/animation.gif)
 
 これを使うと、書籍「チューリングの考えるキカイ ～人工知能の父に学ぶコンピュータ・サイエンスの基礎」
 （阿部彩芽・笠井琢美 著、技術評論社）で仮想プログラミング言語として使われている whileプログラムが実行できます。なお、このインタプリタは書籍のファンである作者が勝手に作成したものであり、書籍の著者ら、出版社とはなんの関係もありません。
 
 書籍のサイト：https://gihyo.jp/book/2018/978-4-7741-9689-3
 
+
+
 ## 特徴
+
 - 実行結果がすぐにわかります！
   - プログラムを入力して実行ボタンを押すだけで、すぐに結果が表示されます。いろいろなおまじないは必要ありません。
   - 実行結果と一緒に変数の値も表示されます。print で表示しなくても簡単にわかります。
 
 - 途中経過も簡単にわかります！
   - 1行ずつ実行できますので、実行過程が目で追えます。
+
 
 
 ## 必要環境
@@ -23,20 +27,27 @@
 - Windows 10(64bit), Python 3.7.7
 - Ubuntu 20.04.2 LTS, Python 3.8.5
 
-プログラムのソースは sources フォルダに入っています。Python3 にて MainWindow.pyw を実行してください：
-
-```
-python3 MainWindow.pyw
-```
-
-ソースの実行には Python ライブラリ PySide2、 PLY (Python Lex-Yacc) が必要です。
+実行には Python ライブラリ PySide2、 PLY (Python Lex-Yacc) が必要です。
 pip コマンドでインストールしてください：
 
 ```
 pip install PySide2 ply
 ```
 
-### Windows10 向け実行ファイル
+
+
+## 実行方法
+
+Python3 にて MainWindow.pyw を実行してください：
+
+```
+python3 MainWindow.pyw
+```
+
+
+
+#### Windows10 向け実行ファイル
+
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。  
 右側の「Releases」 v1.3.9 のリリースから while-v1.3.9-release-Win10-64bit.zip を入手し、展開してから  while-v1.3.9-release-Win10-64bit.exe をダブルクリックして使ってください。下記リンクからも入手できます：
 https://github.com/sintan310/while-interpreter/releases/download/v1.3.9-release/while-v1.3.9-release-Win10-64bit.zip

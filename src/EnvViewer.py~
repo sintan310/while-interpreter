@@ -80,10 +80,6 @@ class EnvViewerItem(QWidget):
         self.set_data(self.data)
 
 
-        # base_item として get_ready 状態（空データで margin 分だけ表示）
-        self.get_ready_status = False
-        
-        
         # tableWidget close 用のアニメーション        
         self.close_animations = QParallelAnimationGroup()
         
@@ -113,14 +109,14 @@ class EnvViewerItem(QWidget):
         #self.animMin_open.setEasingCurve(QEasingCurve.OutCubic)
         #self.animMin.setEasingCurve(QEasingCurve.OutQuad)
         #self.animMin_open.setEasingCurve(QEasingCurve.InCubic)
-        self.animMin_open.setEasingCurve(QEasingCurve.InOutQuad)
+        self.animMin_open.setEasingCurve(QEasingCurve.InQuad)
         
         self.animMax_open = QPropertyAnimation(self, b"maximumHeight")
         self.animMax_open.setStartValue(0)
         #self.animMax_open.setEasingCurve(QEasingCurve.OutCubic)
         #self.animMax.setEasingCurve(QEasingCurve.OutQuad)
         #self.animMax_open.setEasingCurve(QEasingCurve.InCubic)
-        self.animMax_open.setEasingCurve(QEasingCurve.InOutQuad)
+        self.animMax_open.setEasingCurve(QEasingCurve.InQuad)
 
         self.open_animations.addAnimation(self.animMin_open)
         self.open_animations.addAnimation(self.animMax_open)
@@ -191,9 +187,9 @@ class EnvViewerItem(QWidget):
 
 
     # 出現時のアニメーション
-    def open_animation(self, start=None, duration=200, get_ready_effect=False):
+    def open_animation(self, start=None, duration=200):
         
-        height = self.tableWidget_height(get_ready_effect)
+        height = self.tableWidget_height()
         
         self.animMin_open.setDuration(duration)
         self.animMin_open.setEndValue(height)
@@ -212,67 +208,41 @@ class EnvViewerItem(QWidget):
 
     # 閉じるときのアニメーション
     # （deleteLater で destory しないと描画されたままになる）
-    def close(self, destroyAction=None, duration=200, base_item=False):
+    def close(self, destroyAction=None, duration=200):
 
-        if not base_item:
-            # 通常処理
-            height = self.tableWidget_height()
-
-            self.animMin.setDuration(duration)
-            self.animMin.setStartValue(height)
-            self.animMin.setEndValue(0)
-
-            self.animMax.setDuration(duration)
-            self.animMax.setStartValue(height)
-            self.animMax.setEndValue(0)
-
-            if destroyAction:
-                self.animMin.finished.connect(destroyAction)
-
-            self.close_animations.start()
-
-        else:
-            # base_item 用
-            start_height = self.tableWidget_height(get_ready_effect=True)
-            end_height = self.tableWidget_height(get_ready_effect=False)
-
-            self.animMin.setDuration(duration)
-            self.animMin.setStartValue(start_height)
-            self.animMin.setEndValue(end_height)
-
-            self.animMax.setDuration(duration)
-            self.animMax.setStartValue(start_height)
-            self.animMax.setEndValue(end_height)
-
-            self.close_animations.start()
-                                                   
+        height = self.tableWidget_height()
         
-    def tableWidget_height(self, get_ready_effect=False):
-        # get_ready_effect:
-        # called at the first time to ensure the base widget height is 15
+        self.animMin.setDuration(duration)
+        self.animMin.setStartValue(height)
+
+        self.animMax.setDuration(duration)
+        self.animMax.setStartValue(height)
         
+        
+        if destroyAction:
+            self.animMin.finished.connect(destroyAction)
+
+        self.close_animations.start()
+
+        
+    def tableWidget_height(self):
+
         #self.tableWidget.setAttribute(Qt.WA_DontShowOnScreen)
         #self.tableWidget.show()
 
-        # 余白分のため +15 
-        margin = 15
-
         
         height = self.tableWidget.horizontalHeader().height()
-        
+
         length = len(self.data)
         if length == 0:
-            if get_ready_effect:
-                return height+margin
-            else:
-                return height
-
-        height += margin
+            return height
 
         
         for i in range(0, length):
             height += self.tableWidget.rowHeight(i)
             
+        # 余白分のため +10 しておく
+        height += 15
 
         return height
         
@@ -476,19 +446,14 @@ class EnvViewer(QScrollArea):
             new_item = self.make_envViewerItem()
             new_item.set_data(data, previous)            
 
-            top_item = self.viewers[0]
-            top_item.setEnabled(False)
-            
             if lower_data != None:
                 # いまの top_item を一つ前の状態に戻す
                 
-                #top_item_previous = top_item.previous_data
+                top_item = self.viewers[0]
+                top_item_previous = top_item.previous_data
                 top_item.set_data(lower_data)
-                top_item.setEnabled(True)
-                
                 new_item.setEnabled(False)
 
-                
             self.layout.insertWidget(0, new_item)
             self.update()
             
@@ -505,7 +470,6 @@ class EnvViewer(QScrollArea):
                                         duration=600, level_clear=False)
             
             top_item = self.viewers[0]
-            top_item.setEnabled(True)
             top_item.set_data(data)
             self.level -= 1
 
@@ -518,17 +482,10 @@ class EnvViewer(QScrollArea):
             top_item.set_data(data, previous)
 
             if procedure_finished:
-                # トップを disabled、処理を移すので下位レベルを enabled
                 top_item.setEnabled(False)
-                next_item = self.viewers[1]
-                next_item.setEnabled(True)
-                
             else:
-                # トップを enabled、下位レベルは disabled
-                top_item.setEnabled(True)                
-                if len(self.viewers) > 1:
-                    next_item = self.viewers[1]
-                    next_item.setEnabled(False)
+                top_item.setEnabled(True)
+            
 
         
 
@@ -562,34 +519,14 @@ class EnvViewer(QScrollArea):
 
             base_widget = self.layout.itemAt(count-1).widget()
             base_widget.set_data({})
-            base_widget.setEnabled(True)
-
-            if base_widget.get_ready_status:
-                base_widget.close(base_item=True)
-                base_widget.get_ready_status = False
-                
             self.viewers = [base_widget]
 
             self.clear_viewer_chain(widgets)
         else:
         
             base_widget = self.layout.itemAt(0).widget()
-            base_widget.setEnabled(True)
             base_widget.set_data({})
-            
-            if base_widget.get_ready_status:
-                base_widget.close(base_item=True)
-                base_widget.get_ready_status = False
-                
             self.viewers = [base_widget]
-        
-
-    def get_ready(self):
-        base_widget = self.layout.itemAt(0).widget()
-        height = base_widget.tableWidget_height()
-        base_widget.open_animation(get_ready_effect=True,
-                                   start=height, duration=200)
-        base_widget.get_ready_status = True
         
         
     def get_HeaddaColumnWidth(self):

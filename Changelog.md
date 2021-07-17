@@ -1,5 +1,13 @@
 # 変更履歴
 
+2021-07-17
+
+- v1.3.11 としてリリース
+- このソフトウェアの名前を Wice にした。Wice は WHILE program interpreter on counting equipment に由来しています。WHILE プログラムにはいくつかの種類がありますが、ここで扱う WHILE プログラムは、計数機器を操作するためのものですので on counting equipment としています。
+- 変数が使われる前に x-- を行うと実行エラーになる不具合を修正。
+
+
+
 2021-07-15
 
 - v1.3.10 としてリリース

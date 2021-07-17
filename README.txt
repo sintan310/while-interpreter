@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
 
-  While言語のインタプリタ
+  Wice: WHILE 言語のインタプリタ
 
       佐藤伸也
       shinya.sato.mito@vc.ibaraki.ac.jp
@@ -45,16 +45,16 @@ pip コマンドで前もってインストールしてください：
 
 
 1-3. 実行方法
-Python3 にて MainWindow.pyw を実行してください：
- python3 MainWindow.pyw
+Python3 にて Wice.pyw を実行してください：
+ python3 Wice.pyw
  
 
 1-3-1. Windows10 向け実行ファイル
 
 Windows10(64bit)版向けにコンパイル済みの実行ファイル
-while-v1.3.10-release-Win10-64bit.zip を用意しています。
+Wice-v1.3.11-release-Win10-64bit.zip を用意しています。
 下記リンクから入手できます：
-https://github.com/shintan310/while-interpreter/releases/download/v1.3.10-release/while-v1.3.10-release-Win10-64bit.zip
+https://github.com/shintan310/while-interpreter/releases/download/v1.3.11-release/Wice-v1.3.11-release-Win10-64bit.zip
 
 
 
@@ -852,6 +852,17 @@ end
 
 ----------------------------------------------
 6. 変更履歴
+
+2021-07-17
+- v1.3.11 としてリリース
+- このソフトウェアの名前を Wice にしました。
+　Wice は WHILE program interpreter on counting equipment に由来しています。
+　WHILE プログラムにはいくつかの種類がありますが、
+　ここで扱う WHILE プログラムは計数機器を操作するためのものですので 
+　on counting equipment と明示しています。
+- 変数が使われる前に x-- を行うと実行エラーになる不具合を修正。
+
+
 
 2021-07-15
 - v1.3.10 としてリリース

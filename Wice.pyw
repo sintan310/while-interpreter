@@ -226,7 +226,7 @@ class MainWindow(QMainWindow):
         self.fname_with_path = ""
         
         # タイトル        
-        self.title = 'WHILE Program Interpreter'
+        self.title = 'Wice'
         self.set_window_title(self.fname_with_path)
 
         # Central Widget
@@ -803,7 +803,8 @@ class MainWindow(QMainWindow):
 
 
         
-        self.aboutAct = QAction('使い方', self, statusTip='使い方',
+        self.aboutAct = QAction('このソフトウェアについて', self,
+                                statusTip='このソフトウェアについて',
                                 triggered=self.about)
         self.helpMenu.addAction(self.aboutAct)
 
@@ -977,7 +978,11 @@ class MainWindow(QMainWindow):
         
     def about(self):
         QMessageBox.about(self, "このソフトウェアについて",
-            "ソフトウェアの使い方については、同梱されている「README」などを参照してください。")
+            """<ul>
+               <li>このソフトウェア Wice は while プログラムが実際に実行でき、その動作が確かめられます。while プログラムは、下記で示す書籍にて仮想プログラミング言語として 使われています：</li>
+                 <ul><li>「チューリングの考えるキカイ ～人工知能の父に学ぶコンピュータ・サイエンスの基礎」（阿部彩芽・笠井琢美 著、技術評論社）</li></ul>
+               </ul>"""
+                        )
 
     def reset_config(self):
         reply = QMessageBox.question(self, 'UI 配置の初期化', 
@@ -1117,6 +1122,9 @@ class MainWindow(QMainWindow):
                                                  self.debug_trail)
             self.centralWidget.set_ReadOnly(True)
             
+            # EnvViewer を有効に
+            self.envViewer.get_ready()
+
             # oneStep 実行を有効化
             self.thread.oneStep = True
 

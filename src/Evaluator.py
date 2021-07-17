@@ -1076,14 +1076,14 @@ class Evaluator:
 
             elif aNode.leaf == '--':
                 var_name = aNode.children[0].leaf
-                if self.env[var_name] > 0:
-                    try:
+                if var_name in self.env.keys():
+                    
+                    if self.env[var_name] > 0:
                         self.env[var_name] -= 1
-                    except KeyError as e:
-                        self.env[var_name] = 0
-                        
-                else:
-                    self.env[var_name] = 0
+                        return
+
+                
+                self.env[var_name] = 0
 
                 return
 

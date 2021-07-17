@@ -1,4 +1,4 @@
-# whileプログラムのインタプリタ
+# Wice: whileプログラムのインタプリタ
 
 ![screenshot](pic/animation.gif)
 
@@ -38,10 +38,10 @@ pip install PySide2 ply
 
 ## 実行方法
 
-Python3 にて MainWindow.pyw を実行してください：
+Python3 にて Wice.pyw を実行してください：
 
 ```
-python3 MainWindow.pyw
+python3 Wice.pyw
 ```
 
 
@@ -49,8 +49,8 @@ python3 MainWindow.pyw
 #### Windows10 向け実行ファイル
 
 Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。  
-右側の「Releases」 v1.3.10 のリリースから while-v1.3.10-release-Win10-64bit.zip を入手し、展開してから  while-v1.3.10-release-Win10-64bit.exe をダブルクリックして使ってください。下記リンクからも入手できます：
-https://github.com/sintan310/while-interpreter/releases/download/v1.3.10-release/while-v1.3.10-release-Win10-64bit.zip
+右側の「Releases」 v1.3.11 のリリースから Wice-v1.3.11-release-Win10-64bit.zip を入手し、展開してから  Wice-v1.3.11-release-Win10-64bit.exe をダブルクリックして使ってください。下記リンクからも入手できます：
+https://github.com/sintan310/while-interpreter/releases/download/v1.3.11-release/Wice-v1.3.9-release-Win10-64bit.zip
 
 
 
@@ -153,7 +153,18 @@ end
     を、
     ```begin s1;s2; ... ;sm; end```  
     として書けます（つまり、最後の文 sm にセミコロンを付けてもエラーになりません）。
-- whileプログラムの文は 1行で書いてください。行末に```\```を付けると次の行と同じ行として解釈されるようにしていますが、たくさんの文を書くときには複合文 begin ～ end を使いますので、begin ～ endの間は改行しても1行として解釈されるようにしています。
+```
+begin
+    a:=1;
+    if a=1 then
+        print("aは1です")
+    else
+        while 1 do
+            print("aは1ではありません");
+    print(a)
+end
+```
+
 
 #### 配列：
 
@@ -230,9 +241,18 @@ begin
 end
 ```
 
-#### 文字列の長さ（文字数）の取得、配列の長さ（要素数）の取得:
+#### 文字列の長さ（文字数）の取得、配列の長さ（実際の要素数）の取得:
 
-- 手続き ``` len``` を使ってください（組み込み手続きとして実装しています）。
+- 文字列の長さは、文字数とします。例えば、文字列 "abcd" は4文字ですので、長さは 4 です。
+
+- 一般に、配列の「長さ」は配列に含まれる要素数となりますが、書籍の定義では配列の要素は無限個ありますので、ここでは「長さ」を次のようにします：
+
+  - 何も要素が指定されていない配列 [] の「長さ」は 0。
+  - それ以外の配列では、実際に指定されている最大のインデックス + 1 を「長さ」とします。例えば、配列 a が [10, 20, 30, 40] のとき、a[3] まで指定されていますので長さは 3+1、つまり 4 です（要素数と同じになります）。配列 b が [] であり、その後 b[10]:=0 が実行された場合には、b の長さは 11（= 10+1）になります。
+
+- 文字列の長さ、配列の長さの取得には、手続き ``` len``` を使ってください（組み込み手続きとして実装しています）。
+
+  
 
 ```
 begin
@@ -280,7 +300,7 @@ end
 
 ```
 # 素数判定
-procedure  z:= isPrime(n): begin
+procedure z:=isPrime(n): begin
     z:=1;
     w:=2;  # 2 から始めて n まで検査する
     
@@ -308,7 +328,7 @@ end
 ## n番目の素数を求める
 ```
 # n が素数かどうかを判定する
-procedure  z:= isPrime(n): begin
+procedure z:=isPrime(n): begin
     z:=1;
     w:=2;
     while (w < n) and (z=1) do begin
@@ -319,7 +339,7 @@ end
 
 
 # n 番目の素数を取得する
-procedure  z:= getPrime(n): begin
+procedure z:=getPrime(n): begin
     hit:=0;  # 素数を見つけた回数
     z:=2;
     
@@ -470,7 +490,7 @@ procedure z:=fact(n): begin
     end
     else begin
          z1:=fact(n-1);
-         z := n*z1;
+         z:=n*z1;
     end
 end
 

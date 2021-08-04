@@ -38,10 +38,10 @@ pip install PySide2 ply
 
 ## 実行方法
 
-Python3 にて Wice.pyw を実行してください：
+Python3 にて wice.pyw を実行してください：
 
 ```
-python3 Wice.pyw
+python3 wice.pyw
 ```
 
 
@@ -155,13 +155,8 @@ end
     として書けます（つまり、最後の文 sm にセミコロンを付けてもエラーになりません）。
 ```
 begin
-    a:=1;
-    if a=1 then
-        print("aは1です")
-    else
-        while 1 do
-            print("aは1ではありません");
-    print(a)
+    x:=23+10;
+    print(x);   # print(x) に ; をつけても、この後に空文があると解釈されてエラーにならない
 end
 ```
 

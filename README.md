@@ -21,7 +21,23 @@
 
 
 
-## 必要環境
+## 実行方法
+
+#### Windows10 向け実行ファイル
+
+Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。  
+右側の「Releases」 v1.3.11 のリリースから Wice-v1.3.11-release-Win10-64bit.zip を入手し、展開してから  Wice-v1.3.11-release-Win10-64bit.exe をダブルクリックして使ってください。下記リンクからも入手できます：
+https://github.com/sintan310/while-interpreter/releases/download/v1.3.11-release/Wice-v1.3.11-release-Win10-64bit.zip
+
+
+
+#### ソースから実行する
+
+Python3 にて wice.pyw を実行してください：
+
+```
+python3 wice.pyw
+```
 
 動作確認は以下の環境で行っています（Python3 はもっと低いバージョンでも動くと思います）：
 
@@ -34,24 +50,6 @@ pip コマンドでインストールしてください：
 ```
 pip install PySide2 ply
 ```
-
-
-
-## 実行方法
-
-Python3 にて wice.pyw を実行してください：
-
-```
-python3 wice.pyw
-```
-
-
-
-#### Windows10 向け実行ファイル
-
-Windows10(64bit)版向けにコンパイル済みの実行ファイルを用意しています。  
-右側の「Releases」 v1.3.11 のリリースから Wice-v1.3.11-release-Win10-64bit.zip を入手し、展開してから  Wice-v1.3.11-release-Win10-64bit.exe をダブルクリックして使ってください。下記リンクからも入手できます：
-https://github.com/sintan310/while-interpreter/releases/download/v1.3.11-release/Wice-v1.3.11-release-Win10-64bit.zip
 
 
 
@@ -847,7 +845,6 @@ begin
     print(z)     # 24 になるはず
 end
 ```
-
 
 
 
